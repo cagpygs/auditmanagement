@@ -16,7 +16,9 @@ import os
 
 @st.cache_resource
 def get_db_pool():
-    return psycopg2.pool.ThreadedConnectionPool(
+    # Using SimpleConnectionPool because Streamlit threading model
+    # sometimes causes ThreadedConnectionPool to lose track of keys
+    return psycopg2.pool.SimpleConnectionPool(
         1, 20,
         host=os.getenv("DB_HOST", "host.docker.internal"),
         database=os.getenv("DB_NAME", "Irrigation"),
