@@ -251,62 +251,63 @@ def create_master_submission(user_id, module, tables):
 
 def get_user_master_submissions(user_id, module):
     conn = None
+    cur = None
     try:
         conn = get_connection()
+        cur = conn.cursor()
 
         if module:
-            df = pd.read_sql(
-                """
+            cur.execute("""
                 SELECT *
                 FROM master_submission
                 WHERE user_id=%s
                 AND module=%s
                 ORDER BY cycle DESC
-                """,
-                conn,
-                params=[user_id, module],
-            )
+            """, (user_id, module))
         else:
-            df = pd.read_sql(
-                """
+            cur.execute("""
                 SELECT *
                 FROM master_submission
                 WHERE user_id=%s
                 ORDER BY cycle DESC
-                """,
-                conn,
-                params=[user_id],
-            )
-        return df.to_dict("records")
+            """, (user_id,))
+            
+        columns = [desc[0] for desc in cur.description]
+        records = [dict(zip(columns, row)) for row in cur.fetchall()]
+        return records
     except Exception as e:
         st.error(f"Error getting user master submissions: {e}")
         return []
     finally:
+        if cur:
+            cur.close()
         if conn:
             release_connection(conn)
 
 
 def get_user_master_submissions_admin(user_id):
     conn = None
+    cur = None
     try:
         conn = get_connection()
+        cur = conn.cursor()
 
-        df = pd.read_sql(
-            """
+        cur.execute("""
             SELECT *
             FROM master_submission
             WHERE user_id=%s
             ORDER BY cycle DESC
-        """,
-            conn,
-            params=[user_id],
-        )
+        """, (user_id,))
 
-        return df.to_dict("records")
+        columns = [desc[0] for desc in cur.description]
+        records = [dict(zip(columns, row)) for row in cur.fetchall()]
+        return records
     except Exception as e:
         st.error(f"Error getting admin submissions: {e}")
         return []
     finally:
+        if cur:
+            cur.close()
         if conn:
             release_connection(conn)
 
@@ -442,24 +443,24 @@ def get_user_progress(user_id, tables):
         conn = get_connection()
         cur = conn.cursor()
 
-        for table in tables:
-
-            cur.execute(
-                f"""
-                SELECT 1 FROM "{table}"
-                WHERE created_by=%s
-                AND is_draft=TRUE
-                LIMIT 1
-            """,
-                (user_id,),
-            )
-
-            if cur.fetchone():
-                completed += 1
+        if tables:
+            union_queries = []
+            for table in tables:
+                union_queries.append(f"""
+                    SELECT '{table}'
+                    WHERE EXISTS (
+                        SELECT 1 FROM "{table}" WHERE created_by=%s AND is_draft=TRUE
+                    )
+                """)
+            combined_query = " UNION ALL ".join(union_queries)
+            cur.execute(combined_query, [user_id] * len(tables))
+            completed = len(cur.fetchall())
 
     except Exception as e:
         st.error(f"Error getting user progress: {e}")
     finally:
+        if cur:
+            cur.close()
         if conn:
             release_connection(conn)
 
@@ -479,31 +480,32 @@ def get_incomplete_forms(user_id, tables):
         conn = get_connection()
         cur = conn.cursor()
 
-        for table in tables:
+        if tables:
+            union_queries = []
+            params = []
+            for table in tables:
+                columns = get_table_columns(table, is_admin=False)
+                business_cols = [col["column_name"] for col in columns]
 
-            # Get business columns (ignore system fields)
-            columns = get_table_columns(table, is_admin=False)
-            business_cols = [col["column_name"] for col in columns]
+                if not business_cols:
+                    incomplete.append(table)
+                    continue
 
-            if not business_cols:
-                continue
+                conditions = " OR ".join([f'"{col}" IS NOT NULL' for col in business_cols])
 
-            # Condition: at least one business field filled
-            conditions = " OR ".join([f"{col} IS NOT NULL" for col in business_cols])
-
-            query = f"""
-                SELECT 1 FROM "{table}"
-                WHERE created_by=%s
-                AND is_draft=TRUE
-                AND ({conditions})
-                LIMIT 1
-            """
-
-            cur.execute(query, (user_id,))
-            row = cur.fetchone()
-
-            if not row:
-                incomplete.append(table)
+                union_queries.append(f"""
+                    SELECT '{table}'
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM "{table}"
+                        WHERE created_by=%s AND is_draft=TRUE AND ({conditions})
+                    )
+                """)
+                params.append(user_id)
+            
+            if union_queries:
+                combined_query = " UNION ALL ".join(union_queries)
+                cur.execute(combined_query, params)
+                incomplete.extend([row[0] for row in cur.fetchall()])
 
     except Exception as e:
         st.error(f"Error getting incomplete forms: {e}")
@@ -688,8 +690,10 @@ def export_master_submission_pdf(master_id):
 
 def get_table_columns(table, is_admin=False):
     conn = None
+    cur = None
     try:
         conn = get_connection()
+        cur = conn.cursor()
 
         query = """
             SELECT column_name, data_type
@@ -699,7 +703,9 @@ def get_table_columns(table, is_admin=False):
             ORDER BY ordinal_position
         """
 
-        df = pd.read_sql(query, conn, params=[table])
+        cur.execute(query, (table,))
+        columns = [desc[0] for desc in cur.description]
+        records = [dict(zip(columns, row)) for row in cur.fetchall()]
 
         system_fields = (
             "id",
@@ -717,12 +723,14 @@ def get_table_columns(table, is_admin=False):
         )
 
         if not is_admin:
-            df = df[~df["column_name"].isin(system_fields)]
-        return df.to_dict("records")
+            records = [r for r in records if r["column_name"] not in system_fields]
+        return records
     except Exception as e:
         st.error(f"Error getting table columns: {e}")
         return []
     finally:
+        if cur:
+            cur.close()
         if conn:
             release_connection(conn)
 
@@ -764,43 +772,49 @@ def get_user_draft(table, user_id):
 
 def get_users_with_data():
     conn = None
+    cur = None
     try:
         conn = get_connection()
+        cur = conn.cursor()
 
-        # Users with submitted master
-        submitted_query = """
-            SELECT DISTINCT user_id FROM master_submission
+        # Users with submitted master or drafts
+        tables = get_all_tables(conn)
+        
+        draft_queries = ""
+        if tables:
+            union_parts = [f'SELECT created_by AS user_id FROM "{table}" WHERE is_draft=TRUE' for table in tables]
+            draft_queries = " UNION " + " UNION ".join(union_parts)
+
+        combined_query = f"""
+            SELECT DISTINCT user_id FROM (
+                SELECT user_id FROM master_submission
+                {draft_queries}
+            ) as all_users
+            WHERE user_id IS NOT NULL
         """
 
-        submitted_users = pd.read_sql(submitted_query, conn)["user_id"].tolist()
-
-        # Users with drafts in any table
-        tables = get_all_tables(conn)
-        draft_users = set()
-
-        for table in tables:
-            q = f'SELECT DISTINCT created_by FROM "{table}" WHERE is_draft=TRUE'
-            df = pd.read_sql(q, conn)
-            draft_users.update(df["created_by"].tolist())
-
-        all_users = set(submitted_users) | draft_users
-
-        if not all_users:
+        cur.execute(combined_query)
+        all_user_ids = [row[0] for row in cur.fetchall()]
+        
+        if not all_user_ids:
             return pd.DataFrame(columns=["id", "username"])
-
+            
         users_query = f"""
             SELECT id, username
             FROM users
-            WHERE id IN ({','.join(map(str, all_users))})
+            WHERE id IN ({','.join(map(str, all_user_ids))})
             ORDER BY username
         """
-
+        
         users_df = pd.read_sql(users_query, conn)
         return users_df
+        
     except Exception as e:
         st.error(f"Error getting users with data: {e}")
         return pd.DataFrame(columns=["id", "username"])
     finally:
+        if cur:
+            cur.close()
         if conn:
             release_connection(conn)
 
