@@ -33,7 +33,7 @@ if not cookies.ready():
 money_keywords = ["expenditure", "amount", "cost", "payment", "value", "budget"]
 
 st.set_page_config(
-    page_title="Contract Management System",
+    page_title="Audit Management System",
     page_icon="🏗️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -45,7 +45,7 @@ st.markdown("""
      style="display:none;position:absolute;width:0;height:0;overflow:hidden;"
      data-developer="Latief"
      data-contact="+91-8951352811"
-     data-system="Contract Management System"
+     data-system="Audit Management System"
      data-built-for="CAG India"
      aria-hidden="true">
 </div>
@@ -530,7 +530,7 @@ with col_title:
         <div style="display:flex;align-items:center;gap:14px;">
             {LOGO_SMALL}
             <div>
-                <h1 style="margin:0;">Contract Management System</h1>
+                <h1 style="margin:0;">Audit Management System</h1>
                 <div class="subtitle">Application Management Portal</div>
             </div>
         </div>
@@ -586,23 +586,10 @@ def is_section_complete(user_id, table):
 
 
 def render_metric_cards(total, approved, pending, rejected, current_filter, card_type="user"):
-    """Render 4 status metric cards as clickable buttons with styled overlaid HTML."""
+    """Render 3 status metric cards as clickable buttons with styled overlaid HTML."""
     prefix = f"{card_type}_"
 
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-        st.markdown(f"""
-        <div class="metric-card total {'active' if current_filter == 'ALL' else ''}">
-            <div class="metric-number">{total}</div>
-            <div class="metric-label">📦 Total</div>
-        </div>""", unsafe_allow_html=True)
-        if st.button("Select All", key=f"{prefix}btn_all", use_container_width=True):
-            if card_type == "user":
-                st.session_state.user_status_filter = "ALL"
-            else:
-                st.session_state.status_filter = "ALL"
-            st.rerun()
+    c2, c3, c4 = st.columns(3)
 
     with c2:
         st.markdown(f"""
@@ -660,14 +647,14 @@ if not is_admin:
             modules.setdefault(module_prefix, []).append(table)
 
     module_display_map = {m: m.replace("_", " ").title() for m in modules.keys()}
-    sidebar_options = list(module_display_map.values()) + ["📄 Your Submitted Applications"]
+    sidebar_options = ["📄 Dashboard"] + list(module_display_map.values())
 
     # ---- Sidebar ----
     with st.sidebar:
         st.markdown('<div class="sidebar-section-title">Navigation</div>', unsafe_allow_html=True)
 
         # Default icons for option menu
-        icons = ["clipboard-data"] * (len(sidebar_options) - 1) + ["file-earmark-check"]
+        icons = ["grid"] + ["clipboard-data"] * len(module_display_map)
         
         # Navigation index handling
         nav_target = st.session_state.get("nav_to_module")
@@ -716,16 +703,41 @@ if not is_admin:
                 del st.session_state[key]
         st.session_state.current_module = selected_module
 
-    # ---------- SUBMITTED APPLICATIONS PAGE ----------
+    # ---------- DASHBOARD PAGE ----------
 
-    if selected_module == "📄 Your Submitted Applications":
+    if selected_module == "📄 Dashboard":
+
+        st.markdown(f"## 👋 Hello, {st.session_state.username}!")
+        st.markdown("""
+        Welcome to the **Audit Management System Portal**. This platform is designed to streamline your 
+        application submission process, track the status of your submitted records, and manage your 
+         requirements efficiently.
+        """)
+        st.markdown("---")
+        
+        # --- Start New Application Section ---
+        st.markdown("### 🚀 Start New Application")
+        st.markdown("Select a module below to start a new application.")
+        
+        # Display modules in a select box
+        mod_names = list(module_display_map.values())
+        c_sel, c_btn = st.columns([5, 1])
+        with c_sel:
+            selected_new_mod = st.selectbox("Select Module", mod_names, label_visibility="collapsed")
+        with c_btn:
+            if st.button("Start →", use_container_width=True, type="primary"):
+                if selected_new_mod:
+                    st.session_state.nav_to_module = selected_new_mod
+                    st.rerun()
+            
+        st.markdown("---")
 
         if "user_status_filter" not in st.session_state:
             st.session_state.user_status_filter = "ALL"
 
-        st.markdown("## 📄 Your Submitted Applications")
+        st.markdown("### 📋 Your Submitted Applications")
         st.markdown("Here you can view all the applications you have submitted and their current status.")
-        st.markdown("---")
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
         submissions = get_user_master_submissions(user_id, module=None)
         approved_count = sum(1 for s in submissions if s["status"] == "APPROVED")
@@ -733,19 +745,27 @@ if not is_admin:
         pending_count  = sum(1 for s in submissions if s["status"] == "PENDING")
         total_count    = approved_count + rejected_count + pending_count
 
-        render_metric_cards(
-            total_count, approved_count, pending_count, rejected_count,
-            st.session_state.user_status_filter, card_type="user"
-        )
+        if total_count == 0:
+            st.markdown(f"""
+            <div class="empty-state">
+                <div class="empty-icon">📂</div>
+                <p>You have not submitted any applications yet.</p>
+                <small>Select a module from the sidebar to get started.</small>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            render_metric_cards(
+                total_count, approved_count, pending_count, rejected_count,
+                st.session_state.user_status_filter, card_type="user"
+            )
 
         st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-        if submissions:
+        if submissions and st.session_state.user_status_filter != "ALL":
             shown = 0
             for sub in submissions:
-                if st.session_state.user_status_filter != "ALL":
-                    if sub["status"] != st.session_state.user_status_filter:
-                        continue
+                if sub["status"] != st.session_state.user_status_filter:
+                    continue
                 shown += 1
 
                 module_label = (sub.get("module") or "").replace("_", " ").title()
@@ -858,24 +878,6 @@ if not is_admin:
                         clean_name = section_name.replace("_", " ").title()
                         st.markdown(f"**📄 {clean_name}**")
                         st.dataframe(df_section, use_container_width=True)
-
-            if shown == 0:
-                st.markdown("""
-                <div class="empty-state">
-                    <div class="empty-icon">🔍</div>
-                    <p>No applications match the selected filter.</p>
-                    <small>Try selecting "All" to see all your submissions.</small>
-                </div>
-                """, unsafe_allow_html=True)
-
-        else:
-            st.markdown("""
-            <div class="empty-state">
-                <div class="empty-icon">📭</div>
-                <p>You have not submitted any applications yet.</p>
-                <small>Select a module from the sidebar to get started.</small>
-            </div>
-            """, unsafe_allow_html=True)
 
         st.stop()
 
@@ -1034,11 +1036,11 @@ if not is_admin:
             is_master_form = table == first_table
             columns = get_table_columns(table, is_admin=False)
 
-            if table != first_table and not estimate_number:
+            if table != first_table and not first_table_draft:
                 st.markdown("""
                 <div class="section-helper">
                     📌 <b>Please complete the first section first.</b><br>
-                    The Estimate Number and Year of Estimate must be filled in before you can save this section.
+                    You must fill in and save the first section before you can proceed with this one.
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1097,6 +1099,7 @@ if not is_admin:
 
                 with st.form(f"form_{table}"):
                     col1, col2 = st.columns(2)
+                    filled_fields = 0
 
                     for index, col_info in enumerate(columns):
                         col = col_info["column_name"]
@@ -1138,21 +1141,36 @@ if not is_admin:
                                 value = st.text_input(label, key=key)
 
                         form_data[col] = value
+                        if value not in ("", None, 0, 0.0):
+                            filled_fields += 1
 
                     submitted = st.form_submit_button("💾 Save Section", use_container_width=True, type="primary")
 
 
                 if submitted:
-                    estimate_number = form_data.get("estimate_number")
-                    year_of_estimate = form_data.get("year_of_estimate")
+                    # Generic mandatory field validation based on is_nullable
+                    for col_info in columns:
+                        if col_info["is_nullable"] == "NO":
+                            col_name = col_info["column_name"]
+                            val = form_data.get(col_name)
+                            if val in (None, "", 0, 0.0):
+                                display_name = col_name.replace("_", " ").title()
+                                st.error(f"⚠️ {display_name} is required. Please fill it in before saving.")
+                                st.stop()
 
-                    if not estimate_number:
-                        st.error("⚠️ Estimate Number is required. Please fill it in before saving.")
+                    if filled_fields == 0:
+                        st.warning("⚠️ Please fill in at least one field before saving.")
                         st.stop()
 
-                    if not year_of_estimate:
-                        st.error("⚠️ Year of Estimate is required. Please fill it in before saving.")
-                        st.stop()
+                    # Explicit UI level validation for Estimate fields (Contract Management only)
+                    if module_name == "contract_management":
+                        for req_col in ["estimate_number", "year_of_estimate"]:
+                            if req_col in form_data:
+                                val = form_data.get(req_col)
+                                if val in (None, "", 0, 0.0):
+                                    disp = req_col.replace("_", " ").title()
+                                    st.error(f"⚠️ {disp} is required. Please fill it in before saving.")
+                                    st.stop()
 
                     save_draft_record(table, form_data, user_id)
                     st.success("✅ Section saved successfully!")
@@ -1230,8 +1248,8 @@ if not is_admin:
 
                 if st.button("💾 Save Section", key=f"save_{table}", use_container_width=True, type="primary"):
 
-                    if not estimate_number:
-                        st.warning("⚠️ Please complete the first section (Admin Financial Sanction) before saving this one.")
+                    if not first_table_draft:
+                        st.warning("⚠️ Please complete the first section before saving this one.")
                         st.stop()
 
                     if not can_edit:
@@ -1241,8 +1259,11 @@ if not is_admin:
                         st.warning("⚠️ Please fill in at least one field before saving.")
 
                     else:
-                        form_data["estimate_number"] = estimate_number
-                        form_data["year_of_estimate"] = year_of_estimate
+                        table_col_names = [c["column_name"] for c in columns]
+                        if "estimate_number" in table_col_names:
+                            form_data["estimate_number"] = estimate_number
+                        if "year_of_estimate" in table_col_names:
+                            form_data["year_of_estimate"] = year_of_estimate
                         save_draft_record(table, form_data, user_id)
                         st.success("✅ Section saved successfully!")
                         st.rerun()

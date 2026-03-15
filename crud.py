@@ -696,7 +696,7 @@ def get_table_columns(table, is_admin=False):
         cur = conn.cursor()
 
         query = """
-            SELECT column_name, data_type
+            SELECT column_name, data_type, is_nullable
             FROM information_schema.columns
             WHERE table_schema='public'
             AND table_name=%s
