@@ -457,33 +457,48 @@ if "allowed_modules" not in st.session_state:
 
 # --- Live Permission Sync ---
 if st.session_state.get("logged_in") and st.session_state.get("user_id"):
-    current_user_info = get_user_by_id(st.session_state.user_id)
-    if current_user_info:
-        # Check if account was revoked
-        if current_user_info.get("is_active") is False:
-            # Force logout
+    try:
+        current_user_info = get_user_by_id(st.session_state.user_id)
+        if current_user_info:
+            # Check if account was revoked
+            if current_user_info.get("is_active") is False:
+                # Force logout
+                cookies["logged_in"] = "0"
+                cookies["user_id"] = ""
+                cookies.save()
+                st.session_state.logged_in = False
+                st.session_state.user_id = None
+                st.session_state.username = None
+                st.session_state.role = None
+                st.session_state.allowed_modules = ""
+                st.error("❌ Your permission has been revoked. You have been logged out.")
+                st.rerun()
+            
+            # Sync role and permissions only if they changed
+            changed = False
+            if st.session_state.role != current_user_info["role"]:
+                st.session_state.role = current_user_info["role"]
+                cookies["role"] = st.session_state.role
+                changed = True
+                
+            new_allowed = current_user_info["allowed_modules"] or ""
+            if st.session_state.allowed_modules != new_allowed:
+                st.session_state.allowed_modules = new_allowed
+                cookies["allowed_modules"] = st.session_state.allowed_modules
+                changed = True
+            
+            if changed:
+                cookies.save()
+        else:
+            # User no longer exists in DB
             cookies["logged_in"] = "0"
-            cookies["user_id"] = ""
             cookies.save()
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.error("❌ Your permission has been revoked. You have been logged out.")
+            st.session_state.logged_in = False
+            st.session_state.user_id = None
             st.rerun()
-        
-        # Sync role and permissions
-        st.session_state.role = current_user_info["role"]
-        st.session_state.allowed_modules = current_user_info["allowed_modules"] or ""
-        
-        # Update cookies for persistence
-        cookies["role"] = st.session_state.role
-        cookies["allowed_modules"] = st.session_state.allowed_modules
-        cookies.save()
-    else:
-        # User no longer exists in DB
-        cookies["logged_in"] = "0"
-        cookies.save()
-        st.session_state.logged_in = False
-        st.rerun()
+    except Exception as e:
+        # Prevent sync errors from breaking the app
+        pass
 
 
 # ================= LOGIN PAGE =================
@@ -584,12 +599,16 @@ with col_logout:
         cookies["user_id"] = ""
         cookies["username"] = ""
         cookies["role"] = ""
+        cookies["allowed_modules"] = ""
         cookies.save()
 
+        # Targetted reset instead of nuking everything
         st.session_state.logged_in = False
         st.session_state.user_id = None
         st.session_state.username = None
         st.session_state.role = None
+        st.session_state.allowed_modules = ""
+        
         st.rerun()
 
 
