@@ -1660,10 +1660,3 @@ if is_admin:
                         <small>Try selecting a different filter or applicant.</small>
                     </div>
                     """, unsafe_allow_html=True)
-                else: # This else corresponds to `if submissions and st.session_state.status_filter != "ALL":`
-                    st.markdown("""
-                    <div class="empty-state">
-                        <div class="empty-icon">🔍</div>
-                        <small>No submissions found for the selected filter.</small>
-                    </div>
-                    """, unsafe_allow_html=True)
