@@ -724,7 +724,7 @@ def export_master_submission_pdf(master_id):
         )
 
         page_width = landscape(A4)[0] - 40
-        MAX_COLS_PER_TABLE = 8  # 🔥 change if needed
+        MAX_COLS_PER_TABLE = 15  # 🔥 change if needed
 
         for table in tables:
 
@@ -746,7 +746,8 @@ def export_master_submission_pdf(master_id):
             if df.empty:
                 continue
 
-            elements.append(Paragraph(f"<b>{table}</b>", styles["Heading2"]))
+            clean_table_name = table.replace("_", " ").title()
+            elements.append(Paragraph(f"<b>{clean_table_name}</b>", styles["Heading2"]))
             elements.append(Spacer(1, 10))
 
             total_cols = len(df.columns)
@@ -760,7 +761,7 @@ def export_master_submission_pdf(master_id):
                 data = []
 
                 # Header
-                header = [Paragraph(str(col), wrap_style) for col in df_chunk.columns]
+                header = [Paragraph(str(col).replace("_", " ").title(), wrap_style) for col in df_chunk.columns]
                 data.append(header)
 
                 # Rows
@@ -892,53 +893,6 @@ def get_user_draft(table, user_id):
             release_connection(conn)
 
 
-def get_users_with_data():
-    conn = None
-    cur = None
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-
-        # Users with submitted master or drafts
-        tables = get_all_tables(conn)
-        
-        draft_queries = ""
-        if tables:
-            union_parts = [f'SELECT created_by AS user_id FROM "{table}" WHERE is_draft=TRUE' for table in tables]
-            draft_queries = " UNION " + " UNION ".join(union_parts)
-
-        combined_query = f"""
-            SELECT DISTINCT user_id FROM (
-                SELECT user_id FROM master_submission
-                {draft_queries}
-            ) as all_users
-            WHERE user_id IS NOT NULL
-        """
-
-        cur.execute(combined_query)
-        all_user_ids = [row[0] for row in cur.fetchall()]
-        
-        if not all_user_ids:
-            return pd.DataFrame(columns=["id", "username"])
-            
-        users_query = f"""
-            SELECT id, username
-            FROM users
-            WHERE id IN ({','.join(map(str, all_user_ids))})
-            ORDER BY username
-        """
-        
-        users_df = pd.read_sql(users_query, conn)
-        return users_df
-        
-    except Exception as e:
-        st.error(f"Error getting users with data: {e}")
-        return pd.DataFrame(columns=["id", "username"])
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
 
 
 def can_user_edit(master_id):
@@ -950,112 +904,8 @@ def can_user_edit(master_id):
     return False
 
 
-def get_total_master_submissions():
-    conn = None
-    cur = None
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM master_submission;")
-        result = cur.fetchone()[0]
-        return result
-    except Exception as e:
-        st.error(f"Error getting total master submissions: {e}")
-        return 0
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
-
-
-def get_global_status_counts():
-    conn = None
-    cur = None
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT 
-                SUM(CASE WHEN status = 'APPROVED' THEN 1 ELSE 0 END) AS approved,
-                SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) AS rejected,
-                SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) AS pending
-            FROM master_submission;
-        """)
-        result = cur.fetchone()
-        if result:
-            approved = result[0] or 0
-            rejected = result[1] or 0
-            pending = result[2] or 0
-            return approved, rejected, pending
-        return 0, 0, 0
-    except Exception as e:
-        st.error(f"Error getting global status counts: {e}")
-        return 0, 0, 0
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
-
-
-def get_monthly_submission_trend():
-    conn = None
-    try:
-        conn = get_connection()
-        query = """
-            SELECT 
-                TO_CHAR(created_at, 'YYYY-MM') AS month,
-                SUM(CASE WHEN status = 'APPROVED' THEN 1 ELSE 0 END) AS approved,
-                SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) AS rejected,
-                SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) AS pending
-            FROM master_submission
-            GROUP BY month
-            ORDER BY month;
-        """
-        df = pd.read_sql(query, conn)
-        return df
-    except Exception as e:
-        st.error(f"Error getting monthly submission trend: {e}")
-        return pd.DataFrame()
-    finally:
-        if conn:
-            release_connection(conn)
-
 
 # ================= RESTORE DRAFT =================
-def restore_draft_to_session(table, columns, user_id):
-    draft_data = get_user_draft(table, user_id)
-
-    if not draft_data:
-        return
-
-    for col_info in columns:
-
-        col = col_info["column_name"]
-        dtype = col_info["data_type"]
-
-        key = f"{table}_{col}"
-
-        if col not in draft_data:
-            continue
-
-        value = draft_data[col]
-
-        if value is None:
-            continue
-
-        if dtype in ("integer", "bigint", "smallint"):
-            st.session_state[key] = int(value)
-
-        elif dtype in ("numeric", "double precision", "real"):
-            st.session_state[key] = float(value)
-
-        elif dtype == "date":
-            st.session_state[key] = value
-
-        else:
-            st.session_state[key] = str(value)
 
 
 def get_master_status(user_id, module_name):
@@ -1090,37 +940,6 @@ def get_master_status(user_id, module_name):
             release_connection(conn)
 
 
-def get_estimate_details(user_id):
-    conn = None
-    cur = None
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            SELECT estimate_number, year_of_estimate
-            FROM contract_management_admin_financial_sanction
-            WHERE user_id=%s
-            LIMIT 1
-        """,
-            (user_id,),
-        )
-
-        row = cur.fetchone()
-
-        if row:
-            return {"estimate_number": row[0], "year_of_estimate": row[1]}
-
-        return None
-    except Exception as e:
-        st.error(f"Error getting estimate details: {e}")
-        return None
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
 
 
 def delete_user_drafts(master_id, tables):
