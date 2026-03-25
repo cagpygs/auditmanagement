@@ -78,21 +78,19 @@ html, body, [class*="css"] {
 
 /* ---- Top Header Bar ---- */
 .top-header {
-    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-    color: white;
-    padding: 16px 24px;
-    border-radius: 16px;
+    background: transparent;
+    color: #1e293b;
+    padding: 0;
+    margin: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 20px rgba(37,99,235,0.25);
+    gap: 14px;
 }
 .top-header h1 {
     margin: 0;
     font-size: 22px;
     font-weight: 700;
-    color: white;
+    color: #1e293b;
     letter-spacing: -0.3px;
 }
 .top-header .subtitle {
@@ -185,13 +183,9 @@ html, body, [class*="css"] {
     letter-spacing: 0.5px;
 }
 .metric-card.total  { border-top-color: #3b82f6; }
-.metric-card.approved { border-top-color: #10b981; }
-.metric-card.pending  { border-top-color: #f59e0b; }
-.metric-card.rejected { border-top-color: #ef4444; }
+.metric-card.pending  { border-top-color: #10b981; }
 .metric-card.total   .metric-number { color: #3b82f6; }
-.metric-card.approved .metric-number { color: #10b981; }
-.metric-card.pending  .metric-number { color: #f59e0b; }
-.metric-card.rejected .metric-number { color: #ef4444; }
+.metric-card.pending  .metric-number { color: #10b981; }
 .metric-card.active {
     transform: translateY(-3px);
     box-shadow: 0 8px 24px rgba(0,0,0,0.15);
@@ -205,6 +199,45 @@ html, body, [class*="css"] {
     box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     margin-bottom: 20px;
 }
+
+/* ---- Activity Table Styling ---- */
+.activity-header {
+    background: transparent;
+    padding: 10px 16px;
+    margin-bottom: 8px;
+    border-bottom: 2px solid #f1f5f9;
+}
+.activity-header span {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+}
+.activity-card {
+    background: white;
+    padding: 10px 10px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    border: 1px solid #f1f5f9;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+}
+.activity-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.06);
+    border-color: #e2e8f0;
+}
+.activity-badge {
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+}
+.badge-total-count { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.badge-draft-count { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
+.badge-comp-count  { background: #ecfdf5; color: #059669; border: 1px solid #d1fae5; }
 .progress-label {
     font-size: 14px;
     font-weight: 600;
@@ -244,8 +277,7 @@ html, body, [class*="css"] {
     border-left: 6px solid #e2e8f0;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06);
 }
-.submission-card.approved { border-left-color: #10b981; }
-.submission-card.rejected { border-left-color: #ef4444; }
+.submission-card.submitted { border-left-color: #10b981; }
 .submission-card.pending  { border-left-color: #f59e0b; }
 
 /* ---- Status Badge ---- */
@@ -257,9 +289,8 @@ html, body, [class*="css"] {
     font-weight: 700;
     letter-spacing: 0.4px;
 }
-.badge-approved { background: #ecfdf5; color: #065f46; }
-.badge-rejected { background: #fef2f2; color: #991b1b; }
-.badge-pending  { background: #fffbeb; color: #92400e; }
+.badge-submitted { background: #ecfdf5; color: #065f46; }
+.badge-draft     { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
 
 /* ---- Timeline ---- */
 .timeline-card {
@@ -423,6 +454,55 @@ button[data-baseweb="tab"][aria-selected="true"] {
 .empty-state p { font-size: 16px; font-weight: 500; }
 .empty-state small { font-size: 13px; }
 
+/* ---- Hero Banner ---- */
+.hero-banner {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    color: white;
+    padding: 2.5rem 2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.hero-banner h1 { color: white !important; margin: 0 0 0.5rem 0; font-size: 28px; }
+.hero-banner p { color: #94a3b8; margin: 0; font-size: 16px; }
+
+/* ---- Module Selection Cards ---- */
+.module-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    text-decoration: none;
+    color: #1e293b;
+}
+.module-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.1);
+    transform: translateY(-2px);
+}
+.module-card .icon { font-size: 32px; margin-bottom: 12px; }
+.module-card .title { font-weight: 600; font-size: 16px; }
+.module-card .desc { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+/* ---- Section Header ---- */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 1.5rem 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+.section-header h3 { margin: 0; font-size: 20px; color: #1e293b; }
+
 /* ---- Completion banner ---- */
 .completion-banner {
     background: linear-gradient(135deg, #ecfdf5, #d1fae5);
@@ -503,6 +583,13 @@ if st.session_state.get("logged_in") and st.session_state.get("user_id"):
         # Prevent sync errors from breaking the app
         pass
 
+# Helper function for navigation
+def go_home():
+    st.session_state.current_view = "Main"
+    st.session_state.master_id = None
+    st.session_state.show_draft_prompt = None
+    st.rerun()
+
 
 # ================= LOGIN PAGE =================
 
@@ -577,45 +664,51 @@ is_admin = st.session_state.role == "admin"
 role_label = "Administrator" if is_admin else "Field Officer"
 
 # ================= TOP NAVIGATION BAR =================
+# Use more columns for a linear layout
+c_logo, c_title, c_home, c_logout, c_info = st.columns([0.8, 3.2, 1.2, 1.2, 3.6])
 
-col_title, col_user, col_logout = st.columns([6, 3, 1])
+with c_logo:
+    st.markdown(f'<div style="margin-top:10px;">{LOGO_SMALL}</div>', unsafe_allow_html=True)
 
-with col_title:
-    st.markdown(f"""
-    <div class="top-header">
-        <div style="display:flex;align-items:center;gap:14px;">
-            {LOGO_SMALL}
-            <div>
-                <h1 style="margin:0;">Audit Management System</h1>
-                <div class="subtitle">Application Management Portal</div>
-            </div>
-        </div>
-        <div class="user-pill">
-            👤 {st.session_state.username} &nbsp;-&nbsp; {role_label}
-        </div>
+with c_title:
+    st.markdown("""
+    <div style="margin-top:12px;">
+        <h2 style="margin:0; font-size:22px; color:#1e293b;">Audit Management System</h2>
+        <div style="font-size:12px; color:#64748b;">Application Management Portal</div>
     </div>
     """, unsafe_allow_html=True)
 
-# Logout in its own column (right side)
-with col_logout:
-    st.markdown("<div style='margin-top:6px'></div>", unsafe_allow_html=True)
-    if st.button("🚪 Logout", help="Sign out of your account"):
+with c_home:
+    st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
+    if st.button("🏠 Main Page", key="top_home_linear", use_container_width=True):
+        st.session_state.current_view = "Main"
+        if is_admin:
+            st.session_state.status_filter = "ALL"
+            if "selected_user" in st.session_state:
+                del st.session_state["selected_user"]
+        st.rerun()
+
+with c_logout:
+    st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
+    if st.button("🚪 Logout", key="top_logout_linear", use_container_width=True):
         cookies["logged_in"] = "0"
         cookies["user_id"] = ""
         cookies["username"] = ""
         cookies["role"] = ""
         cookies["allowed_modules"] = ""
         cookies.save()
-
-        # Targeted reset instead of clear() which breaks CookieManager internals
-        st.session_state.logging_out = True
         st.session_state.logged_in = False
         st.session_state.user_id = None
-        st.session_state.username = None
-        st.session_state.role = None
-        st.session_state.allowed_modules = ""
-        
         st.rerun()
+
+with c_info:
+    current_date = datetime.datetime.now().strftime("%d %b %Y")
+    st.markdown(f"""
+    <div style="text-align:right; margin-top:20px; border-left: 2px solid #e2e8f0; padding-left:15px;">
+        <div style="font-size:14px; font-weight:600; color:#1e293b;">👤 {st.session_state.username}</div>
+        <div style="font-size:11px; color:#64748b;">🎖️ {role_label} &nbsp;|&nbsp; 📅 {current_date}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # =====================================================
@@ -641,7 +734,7 @@ def fmt_dt(value):
     return str(value)[:16]
 
 
-@st.dialog("📋 Submission Details", width="large")
+@st.dialog("📋 Submission Details", width="large", dismissible=False)
 def show_submission_details(sub, mode="user"):
     """
     Shows full submission data in a centered modal.
@@ -652,38 +745,34 @@ def show_submission_details(sub, mode="user"):
     status = sub["status"]
     is_synthetic_draft = str(sub.get("id", "")).startswith("draft_")
     
-    # ---- Status Summary Timeline ----
+    # ---- Status Summary ----
     created_at = sub.get("created_at", "")
-    approved_at = sub.get("approved_at", "")
-    rejected_at = sub.get("rejected_at", "")
-    reason = sub.get("rejection_reason", "")
+    created_by_user = sub.get("created_by_user") or "Unknown"
 
-    status_color = "#3b82f6" 
-    status_text = "Awaiting Review"
-    if status == "APPROVED":
-        status_color = "#10b981"
-        status_text = f"Approved on {fmt_dt(approved_at)}"
-    elif status == "REJECTED":
-        status_color = "#ef4444"
-        status_text = f"Rejected on {fmt_dt(rejected_at)}"
-    elif status == "DRAFT":
+    if status == "DRAFT":
         status_color = "#64748b"
         status_text = "Work In Progress (Draft)"
+    else:
+        status_color = "#10b981"
+        status_text = "Completed"
 
-    created_by_user = sub.get("created_by_user") or "Unknown"
-    
+    if module_key == "contract_management":
+        est_no = sub.get("estimate_number") or "---"
+        est_yr = sub.get("year_of_estimate") or "---"
+        display_key = f"{est_no} ({fmt_dt(est_yr)})" if est_no != "---" else "---"
+        est_html = f'<div style="font-size:13px; font-weight:600; color:#334155; margin-bottom:6px;">🔹 Estimate Key: {display_key}</div>'
+    else:
+        est_html = ""
+
     st.markdown(f"""
     <div style="padding:15px; border-radius:12px; background:#f8fafc; margin-bottom:20px; border-left:5px solid {status_color};">
         <div style="display:flex; justify-content:space-between; align-items:start;">
             <div>
                 <div style="font-weight:700; font-size:14px; color:#1e3a5f; margin-bottom:4px;">{module_label}</div>
+                {est_html}
                 <div style="font-size:12px; color:#64748b; margin-bottom:2px;"><b>{"Submitted By" if status != "DRAFT" else "Created By"}:</b> {created_by_user}</div>
                 <div style="font-size:12px; color:#64748b;"><b>{"Submitted on" if status != "DRAFT" else "Last Updated"}:</b> {fmt_dt(created_at)}</div>
             </div>
-            <div style="text-align:right;">
-                <div style="font-size:13px; color:{status_color}; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">{status_text}</div>
-            </div>
-        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -713,104 +802,130 @@ def show_submission_details(sub, mode="user"):
 
     # ---- Actions based on mode ----
     if is_synthetic_draft:
-        st.info("💡 This is a **Draft** module. It has not been submitted yet and cannot be reviewed.")
+        st.info("💡 This is a **Draft** module. It has not been submitted yet.")
         return
 
-    if mode == "user":
-        if status == "REJECTED":
-            if reason:
-                st.error(f"**Rejection Reason:** {reason}")
-            
-            sub_module_display = module_display_map.get(module_key, "")
-            if sub_module_display:
-                confirm_key = f"confirm_resubmit_{sub['id']}"
-                module_tables = sorted(modules.get(module_key, []))
-                has_draft = False
-                if module_tables:
-                    has_draft = get_user_draft(module_tables[0], st.session_state.user_id) is not None
+    # Add PDF download for both users and admins if Submitted
+    if status != "DRAFT":
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        pdf = export_master_submission_pdf(sub["id"])
+        st.download_button(
+            "📥 Download PDF Record",
+            pdf,
+            file_name=f"submission_{sub['id']}.pdf",
+            mime="application/pdf",
+            key=f"dlg_pdf_{sub['id']}",
+            use_container_width=True,
+            type="primary"
+        )
+    
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+    if st.button("✖️ Close", key=f"close_sub_details_{sub.get('id', 'def')}", use_container_width=True):
+        st.rerun()
 
-                if not st.session_state.get(confirm_key):
-                    if st.button("✏️ Edit & Resubmit", key=f"dlg_resub_{sub['id']}", use_container_width=True, type="primary"):
-                        if has_draft:
-                            st.session_state[confirm_key] = True
-                            st.rerun()
-                        else:
-                            st.session_state.resubmit_master_id = sub["id"]
-                            st.session_state.resubmit_module = module_key
-                            st.session_state.nav_to_module = sub_module_display
-                            for k in list(st.session_state.keys()):
-                                if k.endswith("_initialized"): del st.session_state[k]
-                            st.rerun()
-                else:
-                    st.warning("⚠️ **Active draft found.** Proceed items will erase current draft.")
-                    c1, c2, c3 = st.columns(3)
-                    with c1:
-                        if st.button("📝 Keep Draft", key=f"dlg_keep_{sub['id']}", use_container_width=True):
-                            st.session_state[confirm_key] = False
-                            st.session_state.nav_to_module = sub_module_display
-                            st.rerun()
-                    with c2:
-                        if st.button("🗑️ Discard & Edit", key=f"dlg_disc_{sub['id']}", use_container_width=True, type="primary"):
-                            delete_draft_by_user(int(st.session_state.user_id), module_tables)
-                            st.session_state[confirm_key] = False
-                            st.session_state.resubmit_master_id = sub["id"]
-                            st.session_state.resubmit_module = module_key
-                            st.session_state.nav_to_module = sub_module_display
-                            for k in list(st.session_state.keys()):
-                                if k.endswith("_initialized"): del st.session_state[k]
-                            st.rerun()
-                    with c3:
-                        if st.button("✖ Cancel", key=f"dlg_can_{sub['id']}", use_container_width=True):
-                            st.session_state[confirm_key] = False
-                            st.rerun()
-        
-        # Add PDF download for users if Approved or Rejected
-        if status in ["APPROVED", "REJECTED"]:
-            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-            pdf = export_master_submission_pdf(sub["id"])
-            st.download_button(
-                "📥 Download PDF Record",
-                pdf,
-                file_name=f"submission_{sub['id']}.pdf",
-                mime="application/pdf",
-                key=f"dlg_user_pdf_{sub['id']}",
-                use_container_width=True,
-                type="primary" if status == "APPROVED" else "secondary"
-            )
+@st.dialog("📂 Applications for Estimate", width="large", dismissible=False)
+def show_estimate_group_dialog(est_no, est_yr, user_id=None):
+    """
+    Shows all master_submission records for a specific estimate number and year.
+    """
+    st.markdown(f"#### 📜 Grouped by Estimate: **{est_no}** ({fmt_dt(est_yr)})")
+    
+    is_admin_user = st.session_state.get("role") == "admin"
 
-    elif mode == "admin":
-        st.markdown("### ⚖️ Review Decision")
-        col_approve, col_reject, col_download = st.columns([1, 2, 1])
-
-        with col_approve:
-            if st.button("✅ Approve", key=f"dlg_app_{sub['id']}", use_container_width=True):
-                approve_master_submission(sub["id"])
-                st.success("Approved.")
+    # --- ACTION BUTTONS AT TOP ---
+    if not is_admin_user:
+        cols = st.columns([1, 1, 1])
+        with cols[0]:
+            if st.button("➕ Start New Application for this Estimate Number", key=f"btn_new_app_grp_{est_no}", use_container_width=True, type="primary"):
+                st.session_state.trigger_new_app_from_modal = True
+                st.session_state.initial_estimate_number = est_no
+                st.session_state.initial_year_of_estimate = est_yr
                 st.rerun()
+        st.markdown("<div style='height:15px'></div>", unsafe_allow_html=True)
+    
+    st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
+    
+    submissions = get_submissions_by_estimate(est_no, est_yr, user_id=user_id)
+    
+    if not submissions:
+        st.info("No applications found for this estimate.")
+        return
 
-        with col_reject:
-            reason_input = st.text_input("Rejection Reason", key=f"dlg_reason_{sub['id']}", placeholder="Reason...")
-            if st.button("❌ Reject", key=f"dlg_rej_{sub['id']}", use_container_width=True):
-                if not reason_input.strip():
-                    st.error("Enter reason.")
-                else:
-                    reject_master_submission(sub["id"], reason_input)
-                    st.success("Rejected.")
+    # Header for the applications list
+    h1, h2, h3, h4, r_spacer, h6 = st.columns([0.8, 1.8, 1.2, 1.2, 1.0, 1.2])
+    h1.markdown("**S.No**")
+    h2.markdown("**User**")
+    h3.markdown("**Date**")
+    h4.markdown("**Status**")
+    h6.markdown("**Action**")
+    st.markdown("<hr style='margin:0; margin-bottom:10px;'>", unsafe_allow_html=True)
+
+    for i, s in enumerate(submissions, 1):
+        r1, r2, r3, r4, r_spacer2, r6 = st.columns([0.8, 1.8, 1.2, 1.2, 1.0, 1.2])
+        status = s.get("status", "DRAFT")
+        status_color = "#3b82f6" if status == "DRAFT" else "#10b981"
+        
+        with r1:
+            st.write(f"**{i}**")
+        with r2:
+            st.write(s.get("created_by_user", "Unknown"))
+        with r3:
+            st.write(fmt_dt(s.get("created_at")))
+        with r4:
+            st.markdown(f'<span style="background:{status_color}22; color:{status_color}; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600;">{status}</span>', unsafe_allow_html=True)
+            
+        with r6:
+            if status == "DRAFT" and not is_admin_user:
+                if st.button("📝 Resume", key=f"btn_group_res_{s['id']}", use_container_width=True):
+                    st.session_state.master_id = s["id"]
+                    st.session_state.current_view = s.get("module")
+                    st.rerun()
+            else:
+                # View button for completed or drafts (if admin)
+                if st.button("🔍 View", key=f"btn_group_view_{s['id']}", use_container_width=True):
+                    st.session_state.sub_to_view = s
+                    st.session_state.sub_view_mode = "admin" if is_admin_user else "user"
                     st.rerun()
 
-        with col_download:
-            pdf = export_master_submission_pdf(sub["id"])
-            st.download_button(
-                "📥 PDF",
-                pdf,
-                file_name=f"submission_{sub['id']}.pdf",
-                mime="application/pdf",
-                key=f"dlg_pdf_{sub['id']}",
-                use_container_width=True,
-            )
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+    if st.button("✖️ Close", key=f"close_est_group_{est_no}", use_container_width=True):
+        st.rerun()
 
-def is_section_complete(user_id, table):
-    percentage, completed, total = get_user_progress(user_id, [table])
+@st.dialog("📋 Application Already Exists", width="medium")
+def show_duplicate_submission_modal():
+    """Shows a modal when a user tries to start an estimate that already has a submission."""
+    data = st.session_state.get("active_modal_data")
+    if not data:
+        st.rerun()
+        return
+
+    m_key = data["module"]
+    est_no = data["est_no"]
+    est_yr = data["est_yr"]
+    sub = data["sub"]
+    status = sub["status"]
+    
+    yr_val = getattr(est_yr, 'year', est_yr)
+    st.markdown(f"An application for **{est_no}** ({yr_val}) already exists.")
+    
+    if status == "DRAFT":
+        st.warning("⚠️ **Existing Draft Found**\nYou already have an unfinished draft for this estimate. Please resume it from the dashboard below.")
+    else:
+        st.error("🚫 **Submission Already Completed**\nThis estimate has already been submitted and cannot be modified or duplicated.")
+        if st.button("🔍 View Submission Details", type="primary", use_container_width=True):
+            show_submission_details(sub, mode="user")
+            # We don't clear modal data here so the details show behind it, 
+            # or we clear and let details render?
+            # Actually show_submission_details is also a dialog. 
+            # Streamlit doesn't support nested dialogs well.
+            # So let's just show a close button.
+            
+    if st.button("✖️ Close", use_container_width=True):
+        del st.session_state["active_modal_data"]
+        st.rerun()
+
+def is_section_complete(user_id, table, master_id=None):
+    percentage, completed, total = get_user_progress(user_id, [table], master_id=master_id)
     return percentage == 100
 
 def paginate_list(items, key_prefix, render_controls=True):
@@ -881,17 +996,17 @@ def render_pagination_footer(key_prefix, total_pages):
     st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
 
 
-def render_metric_cards(total, approved, pending, rejected, current_filter, card_type="user", drafts=None):
+def render_metric_cards(total, submitted, drafts, current_filter, card_type="user"):
     """Render status metric cards as clickable buttons."""
     prefix = f"{card_type}_"
-    num_cols = 5 if drafts is not None else 4
+    num_cols = 3
     cols = st.columns(num_cols)
 
     with cols[0]:
         st.markdown(f"""
         <div class="metric-card" style="background: white; border: 1px solid #e2e8f0; {'border: 2px solid #3b82f6;' if current_filter == 'ALL' else ''}">
             <div class="metric-number" style="color: #475569;">{total}</div>
-            <div class="metric-label">📋 Total</div>
+            <div class="metric-label">📋 Total Applications</div>
         </div>""", unsafe_allow_html=True)
         if st.button("Select All", key=f"{prefix}btn_all", use_container_width=True):
             if card_type == "user":
@@ -904,60 +1019,33 @@ def render_metric_cards(total, approved, pending, rejected, current_filter, card
 
     with cols[1]:
         st.markdown(f"""
-        <div class="metric-card approved {'active' if current_filter == 'APPROVED' else ''}">
-            <div class="metric-number">{approved}</div>
-            <div class="metric-label">✅ Approved</div>
+        <div class="metric-card pending {'active' if current_filter == 'COMPLETED' else ''}">
+            <div class="metric-number">{submitted}</div>
+            <div class="metric-label">✅ Completed</div>
         </div>""", unsafe_allow_html=True)
-        if st.button("Select Approved", key=f"{prefix}btn_approved", use_container_width=True):
+        if st.button("Select Completed", key=f"{prefix}btn_submitted", use_container_width=True):
             if card_type == "user":
-                st.session_state.user_status_filter = "APPROVED"
+                st.session_state.user_status_filter = "COMPLETED"
                 st.session_state.dashboard_page = 1
             else:
-                st.session_state.status_filter = "APPROVED"
+                st.session_state.status_filter = "COMPLETED"
                 st.session_state.admin_review_page = 1
             st.rerun()
 
     with cols[2]:
         st.markdown(f"""
-        <div class="metric-card pending {'active' if current_filter == 'PENDING' else ''}">
-            <div class="metric-number">{pending}</div>
-            <div class="metric-label">🕐 Pending</div>
+        <div class="metric-card" style="background: white; border: 1px solid #e2e8f0; {'border: 2px solid #3b82f6;' if current_filter == 'DRAFT' else ''}">
+            <div class="metric-number" style="color: #64748b;">{drafts}</div>
+            <div class="metric-label">📝 Drafted Applications</div>
         </div>""", unsafe_allow_html=True)
-        if st.button("Select Pending", key=f"{prefix}btn_pending", use_container_width=True):
+        if st.button("Select Drafts", key=f"{prefix}btn_drafts", use_container_width=True):
             if card_type == "user":
-                st.session_state.user_status_filter = "PENDING"
+                st.session_state.user_status_filter = "DRAFT"
                 st.session_state.dashboard_page = 1
             else:
-                st.session_state.status_filter = "PENDING"
-                st.session_state.admin_review_page = 1
-            st.rerun()
-
-    with cols[3]:
-        st.markdown(f"""
-        <div class="metric-card rejected {'active' if current_filter == 'REJECTED' else ''}">
-            <div class="metric-number">{rejected}</div>
-            <div class="metric-label">❌ Rejected</div>
-        </div>""", unsafe_allow_html=True)
-        if st.button("Select Rejected", key=f"{prefix}btn_rejected", use_container_width=True):
-            if card_type == "user":
-                st.session_state.user_status_filter = "REJECTED"
-                st.session_state.dashboard_page = 1
-            else:
-                st.session_state.status_filter = "REJECTED"
-                st.session_state.admin_review_page = 1
-            st.rerun()
-
-    if drafts is not None:
-        with cols[4]:
-            st.markdown(f"""
-            <div class="metric-card" style="background: white; border: 1px solid #e2e8f0; {'border: 2px solid #3b82f6;' if current_filter == 'DRAFT' else ''}">
-                <div class="metric-number" style="color: #64748b;">{drafts}</div>
-                <div class="metric-label">📝 Drafts</div>
-            </div>""", unsafe_allow_html=True)
-            if st.button("Select Drafts", key=f"{prefix}btn_drafts", use_container_width=True):
                 st.session_state.status_filter = "DRAFT"
                 st.session_state.admin_review_page = 1
-                st.rerun()
+            st.rerun()
 
 
 # ================= MODULE CONFIGURATION =================
@@ -989,101 +1077,182 @@ if not is_admin:
         modules = {}
 
     module_display_map = {m: m.replace("_", " ").title() for m in modules.keys()}
-    sidebar_options = ["📄 Dashboard"] + list(module_display_map.values())
+    # Navigation handling (Sidebar removed, now just view state)
+    if "current_view" not in st.session_state:
+        st.session_state.current_view = "Main"
+    
+    current_view_key = st.session_state.current_view
 
-    # ---- Sidebar ----
-    with st.sidebar:
-        st.markdown('<div class="sidebar-section-title">Navigation</div>', unsafe_allow_html=True)
-
-        # Default icons for option menu
-        icons = ["grid"] + ["clipboard-data"] * len(module_display_map)
-        
-        # Navigation index handling
-        nav_target = st.session_state.get("nav_to_module")
-        default_idx = 0
-        manual_idx = None
-        
-        if nav_target and nav_target in sidebar_options:
-            default_idx = sidebar_options.index(nav_target)
-            manual_idx = default_idx
-            st.session_state.nav_to_module = None  # consume it
-
-        selected_module = option_menu(
-            menu_title=None,
-            options=sidebar_options,
-            icons=icons,
-            default_index=default_idx,
-            styles={
-                "container": {"padding": "0!important", "background-color": "transparent", "border": "none"},
-                "icon": {"color": "#64748b", "font-size": "16px"},
-                "nav-link": {"font-size": "14px", "text-align": "left", "margin": "0px", "--hover-color": "#f1f5f9"},
-                "nav-link-selected": {"background-color": "#eff6ff", "color": "#1d4ed8", "font-weight": "600"}
-            },
-            key="sidebar_nav_option",
-            manual_select=manual_idx
-        )
-        st.markdown("---")
-
-        st.markdown(f"""
-        <div class="sidebar-info-card">
-            👤 <b>User:</b> {st.session_state.username}<br>
-            🔑 <b>Role:</b> {role_label}<br>
-            📅 <b>Today:</b> {datetime.date.today().strftime("%d %b %Y")}
-        </div>
-        <div class="sidebar-tip">
-            💡 <b>Tip:</b> Select a module from above to start filling in your application forms.
-        </div>
-        """, unsafe_allow_html=True)
+    # Map current view key to a display name for selected_module if it's a module
+    if current_view_key == "Main":
+        selected_module = "Main"
+    else:
+        selected_module = module_display_map.get(current_view_key, current_view_key)
 
     # Reset form initialization when module changes
     if "current_module" not in st.session_state:
         st.session_state.current_module = selected_module
-
+    
     if st.session_state.current_module != selected_module:
         for key in list(st.session_state.keys()):
             if key.endswith("_initialized"):
                 del st.session_state[key]
         st.session_state.current_module = selected_module
 
-    # ---------- DASHBOARD PAGE ----------
+    # ---------- MAIN PAGE ----------
 
-    if selected_module == "📄 Dashboard":
+    if selected_module == "Main":
 
-        st.markdown(f"## 👋 Hello, {st.session_state.username}!")
+        st.markdown(f"""
+        <div class="hero-banner">
+            <h1>👋 Welcome Back, {st.session_state.username}!</h1>
+            <p>Access your audit modules, track application progress, and manage your submissions from this central portal.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("""
-        Welcome to the **Audit Management System Portal**. This platform is designed to streamline your 
-        application submission process, track the status of your submitted records, and manage your 
-         requirements efficiently.
-        """)
-        st.markdown("---")
+        # Fetch data early for use in forms/logic
+        draft_summaries = get_user_draft_summaries(user_id, all_modules)
         
         # --- Start New Application Section ---
-        st.markdown("### 🚀 Start New Application")
+        st.markdown('<div class="section-header"><h3>🚀 Start New Application</h3></div>', unsafe_allow_html=True)
         
         if not modules:
-            st.warning("⚠️ **No modules have been assigned to your account yet.**\n\nPlease contact your administrator to grant access to specific modules.")
+            st.warning("⚠️ **No modules have been assigned to your account yet.** Please contact your administrator to grant access.")
         else:
             st.markdown("Select a module below to start a new application.")
             
-            # Display modules in a select box
-            mod_names = list(module_display_map.values())
-            c_sel, c_btn = st.columns([5, 1])
-            with c_sel:
-                selected_new_mod = st.selectbox("Select Module", mod_names, label_visibility="collapsed")
-            with c_btn:
-                if st.button("Start →", use_container_width=True, type="primary"):
-                    if selected_new_mod:
-                        st.session_state.nav_to_module = selected_new_mod
-                        st.rerun()
+            def clear_module_state(m_key):
+                """Clears unattached drafts from DB and session state for the given module."""
+                m_tables = all_modules.get(m_key, [])
+                delete_unattached_drafts(user_id, m_tables)
+                # Clear all session state keys for these tables
+                for table in m_tables:
+                    for key in list(st.session_state.keys()):
+                        if key.startswith(f"{table}_") or key.startswith(f"display_{table}_"):
+                            del st.session_state[key]
+                
+                # Also clear the initial preliminary values
+                if "initial_estimate_number" in st.session_state:
+                    del st.session_state["initial_estimate_number"]
+                if "initial_year_of_estimate" in st.session_state:
+                    del st.session_state["initial_year_of_estimate"]
+
+            def handle_start_click():
+                sel_m_key = st.session_state.get("new_app_sel_key")
+                curr_uid = st.session_state.get("user_id")
+                
+                if sel_m_key:
+                    # Check for existing drafts generally (other modules)
+                    existing_drafts = [d for d in draft_summaries if d.get("module") == sel_m_key]
+                    
+                    if sel_m_key == "contract_management":
+                        est_no = st.session_state.get("new_app_est_no", "").strip()
+                        est_yr = st.session_state.get("new_app_est_yr")
+                        if not est_no or not est_yr:
+                            st.error("⚠️ Please enter Estimate Number and Year before starting.")
+                            return
+                        
+                        # Only block/warn if there is an existing DRAFT for this estimate.
+                        # Multiple completed ones are now allowed.
+                        existing_ones = get_submissions_by_estimate(est_no, est_yr)
+                        existing_drafts_est = [s for s in existing_ones if s["status"] == "DRAFT"]
+                        
+                        if existing_drafts_est:
+                            st.session_state.active_modal_data = {
+                                "module": sel_m_key,
+                                "est_no": est_no,
+                                "est_yr": est_yr,
+                                "sub": existing_drafts_est[0]
+                            }
+                            return
+                    
+                    elif existing_drafts:
+                        # For other modules, show the standard draft prompt (Now as a modal too)
+                        st.session_state.active_modal_data = {
+                            "module": sel_m_key,
+                            "est_no": None,
+                            "est_yr": None,
+                            "sub": existing_drafts[0]
+                        }
+                        return
+                    
+                    # If no duplicates/drafts, start fresh
+                    clear_module_state(sel_m_key)
+                    if sel_m_key == "contract_management":
+                        st.session_state.initial_estimate_number = st.session_state.get("new_app_est_no")
+                        st.session_state.initial_year_of_estimate = st.session_state.get("new_app_est_yr")
+                    
+                    st.session_state.master_id = None
+                    st.session_state.current_view = sel_m_key
             
-        st.markdown("---")
+            # --- Module Selection & Estimate Inputs ---
+            if not is_admin:
+                c_sel, c_btn = st.columns([5, 1])
+                with c_sel:
+                    selected_m = st.selectbox(
+                        "Select Module", 
+                        options=list(module_display_map.keys()), 
+                        format_func=lambda x: module_display_map[x],
+                        key="new_app_sel_key",
+                        label_visibility="collapsed"
+                    )
+                
+                # Show estimate inputs if Contract Management is selected
+                if selected_m == "contract_management":
+                    # Sanitize new_app_est_yr to be a date object
+                    if "new_app_est_yr" in st.session_state and isinstance(st.session_state.new_app_est_yr, str):
+                        del st.session_state.new_app_est_yr
+                    if "new_app_est_yr" not in st.session_state:
+                        st.session_state.new_app_est_yr = datetime.date.today()
+
+                    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+                    ce1, ce2 = st.columns(2)
+                    with ce1:
+                        st.text_input("Estimate Number", placeholder="Enter Estimate Number", key="new_app_est_no")
+                    with ce2:
+                        st.date_input("Year of Estimate", key="new_app_est_yr")
+
+                with c_btn:
+                    st.button("Start →", key="start_new_app_btn", use_container_width=True, type="primary", on_click=handle_start_click)
+
+            # --- TRIGGER SUBMISSION DETAILS FROM MODAL ---
+            if st.session_state.get("sub_to_view"):
+                sub_to_view = st.session_state.get("sub_to_view")
+                mode = st.session_state.get("sub_view_mode", "user")
+                del st.session_state["sub_to_view"]
+                if "sub_view_mode" in st.session_state:
+                    del st.session_state["sub_view_mode"]
+                show_submission_details(sub_to_view, mode=mode)
+
+            # --- MODAL PROMPT TRIGGER ---
+            if st.session_state.get("active_modal_data"):
+                show_duplicate_submission_modal()
+
+            # --- TRIGGER NEW APP FROM MODAL ---
+            if st.session_state.get("trigger_new_app_from_modal"):
+                del st.session_state["trigger_new_app_from_modal"]
+                # Save values before clearing
+                saved_no = st.session_state.get("initial_estimate_number")
+                saved_yr = st.session_state.get("initial_year_of_estimate")
+                clear_module_state("contract_management")
+                # Restore values
+                st.session_state.initial_estimate_number = saved_no
+                st.session_state.initial_year_of_estimate = saved_yr
+                st.session_state.master_id = None
+                st.session_state.current_view = "contract_management"
+                st.rerun()
+
+                
+                
+
+
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="section-header"><h3>📋 Your Activity & Submissions</h3></div>', unsafe_allow_html=True)
 
         if "user_status_filter" not in st.session_state:
             st.session_state.user_status_filter = "ALL"
 
-        st.markdown("### 📋 Your Submitted Applications")
-        st.markdown("Here you can view all the applications you have submitted and their current status.")
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
         raw_submissions = get_user_master_submissions(user_id, module=None)
@@ -1092,32 +1261,70 @@ if not is_admin:
         allowed_list = st.session_state.get("allowed_modules", "").split(",") if st.session_state.get("allowed_modules") else []
         submissions = [s for s in raw_submissions if s.get("module") in allowed_list]
 
-        approved_count = sum(1 for s in submissions if s["status"] == "APPROVED")
-        rejected_count = sum(1 for s in submissions if s["status"] == "REJECTED")
-        pending_count  = sum(1 for s in submissions if s["status"] == "PENDING")
-        total_count    = approved_count + rejected_count + pending_count
+        # Get draft count for user
+        draft_count = len(draft_summaries)
+        
+        submitted_count = len(submissions)
+        total_count = submitted_count + draft_count
 
         if total_count == 0:
             st.markdown(f"""
             <div class="empty-state">
                 <div class="empty-icon">📂</div>
-                <p>You have not submitted any applications yet.</p>
-                <small>Select a module from the sidebar to get started.</small>
+                <p>You have not created any applications yet.</p>
+                <small>Select a module from the grid above to get started.</small>
             </div>
             """, unsafe_allow_html=True)
         else:
+            # Combine submissions and drafts for unified view if filter is ALL
+            all_items = submissions + draft_summaries
+            all_items.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
+
             render_metric_cards(
-                total_count, approved_count, pending_count, rejected_count,
+                total_count, submitted_count, draft_count,
                 st.session_state.user_status_filter, card_type="user"
             )
 
-        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
-        if submissions:
-            if st.session_state.user_status_filter != "ALL":
-                filtered_subs = [s for s in submissions if s["status"] == st.session_state.user_status_filter]
+        if submissions or draft_summaries:
+            if st.session_state.user_status_filter == "COMPLETED":
+                raw_filtered = [s for s in all_items if s["status"] != "DRAFT"]
+            elif st.session_state.user_status_filter == "DRAFT":
+                raw_filtered = [s for s in all_items if s["status"] == "DRAFT"]
             else:
-                filtered_subs = submissions
+                raw_filtered = all_items
+            
+            # --- Grouping Logic ---
+            grouped_data = {}
+            for item in raw_filtered:
+                e_no = item.get("estimate_number") or "---"
+                e_yr = item.get("year_of_estimate") or "---"
+                
+                # Group by estimate if present, otherwise group by master_id
+                if e_no != "---":
+                    # Case-insensitive grouping by estimate and just the year
+                    # Use est_yr.year if it's a date, otherwise just take what's there
+                    yr_val = getattr(e_yr, 'year', e_yr)
+                    group_key = (str(e_no).strip().lower(), str(yr_val))
+                else:
+                    group_key = (f"master_{item['id']}", None)
+                
+                if group_key not in grouped_data:
+                    grouped_data[group_key] = {
+                        "estimate_number": e_no,
+                        "year_of_estimate": e_yr,
+                        "latest_date": item.get("created_at"),
+                        "count": 1,
+                        "module": item.get("module"),
+                        "sub": item
+                    }
+                else:
+                    grouped_data[group_key]["count"] += 1
+                    if (item.get("created_at") or "") > (grouped_data[group_key]["latest_date"] or ""):
+                        grouped_data[group_key]["latest_date"] = item.get("created_at")
+            
+            filtered_subs = sorted(grouped_data.values(), key=lambda x: str(x["latest_date"] or ""), reverse=True)
             
             # Show simple message if no filtered results
             if not filtered_subs:
@@ -1127,37 +1334,46 @@ if not is_admin:
                 paged_subs, start_idx, total_pages = paginate_list(filtered_subs, "dashboard_page", render_controls=False)
                 
                 # Tabular Header
-                h1, h2, h3, h4, h5 = st.columns([0.5, 2.5, 2, 1.5, 1.5])
+                h1, h2, h3, h4, h5 = st.columns([0.5, 3.0, 1.5, 2.5, 2.5])
                 h1.markdown("**S.No**")
-                h2.markdown("**Module Name**")
-                h3.markdown("**Submitted Date**")
-                h4.markdown("**Status**")
-                h5.markdown("**Action**")
+                h2.markdown("**Estimate Number**")
+                h3.markdown("**Year**")
+                h4.markdown("**Date**")
+                h5.markdown("**No. of Applications**")
                 st.markdown("<hr style='margin:0; margin-bottom:10px;'>", unsafe_allow_html=True)
 
-                for i, sub in enumerate(paged_subs):
+                for i, group in enumerate(paged_subs):
                     s_no = start_idx + i + 1
-                    module_label = (sub.get("module") or "").replace("_", " ").title()
-                    status = sub["status"]
-
-                    if status == "APPROVED":
-                        badge_html = '<span class="badge badge-approved" style="padding:2px 8px; font-size:11px;">✅ Approved</span>'
-                    elif status == "REJECTED":
-                        badge_html = '<span class="badge badge-rejected" style="padding:2px 8px; font-size:11px;">❌ Rejected</span>'
-                    else:
-                        badge_html = '<span class="badge badge-pending" style="padding:2px 8px; font-size:11px;">🕐 Pending</span>'
-
-                    submitted_date = fmt_dt(sub.get("created_at", ""))
+                    est_no = group["estimate_number"]
+                    est_yr = group["year_of_estimate"]
+                    app_count = group["count"]
+                    latest_date = group["latest_date"]
                     
-                    r1, r2, r3, r4, r5 = st.columns([0.5, 2.5, 2, 1.5, 1.5])
+                    r1, r2, r3, r4, r5 = st.columns([0.5, 3.0, 1.5, 2.5, 2.5])
                     r1.write(f"{s_no}")
-                    r2.write(module_label)
-                    r3.write(submitted_date)
-                    r4.markdown(badge_html, unsafe_allow_html=True)
                     
+                    with r2:
+                        if est_no and est_no != "---":
+                            if st.button(f"**{est_no}**", key=f"btn_grp_{i}_{est_no}", use_container_width=True):
+                                show_estimate_group_dialog(est_no, est_yr, user_id=user_id)
+                        else:
+                            # If no estimate, show module name and link to dialog specifically for this item
+                            mod_name = module_display_map.get(group.get("module"), "Draft")
+                            if st.button(f"**{mod_name} (Draft)**", key=f"btn_grp_{i}_{est_no}", use_container_width=True):
+                                show_estimate_group_dialog(est_no, est_yr, user_id=user_id)
+                    
+                    with r3:
+                        st.write(fmt_dt(est_yr))
+                    with r4:
+                        st.write(fmt_dt(latest_date))
                     with r5:
-                        if st.button("🔍 View", key=f"btn_view_{sub['id']}", use_container_width=True):
-                            show_submission_details(sub, mode="user")
+                        st.markdown(f"""
+                        <div style="background:#f1f5f9; border-radius:30px; padding:4px 12px; display:inline-block; font-weight:700; color:#1e3a5f; font-size:13px;">
+                            👥 {app_count} Application{'s' if app_count > 1 else ''}
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                st.markdown('</div>', unsafe_allow_html=True)
                 
                 # Navigation at bottom
                 render_pagination_footer("dashboard_page", total_pages)
@@ -1166,7 +1382,7 @@ if not is_admin:
 
     # ---- Module Form Area ----
 
-    module_name = [k for k, v in module_display_map.items() if v == selected_module][0]
+    module_name = current_view_key
     tables = sorted(modules[module_name])
     prefix = module_name + "_"
 
@@ -1175,93 +1391,22 @@ if not is_admin:
     else:
         can_edit = True
 
-    # ---- Pre-fill from rejected submission if Edit & Resubmit was clicked ----
-    resubmit_mid = st.session_state.get("resubmit_master_id")
-    resubmit_mod = st.session_state.get("resubmit_module")
-    rejected_prefill = {}  # {table: {col: value}}
-    rejected_reason  = ""
-
-    if resubmit_mid and resubmit_mod == module_name:
-        can_edit = True
-        raw = get_full_submission_data(resubmit_mid)
-        for tbl, df in raw.items():
-            if not df.empty:
-                rejected_prefill[tbl] = df.iloc[0].to_dict()
-
-        # Fetch rejection reason from master_submission
-        all_subs = get_user_master_submissions(user_id, module=module_name)
-        for s in all_subs:
-            if s["id"] == resubmit_mid:
-                rejected_reason = s.get("rejection_reason", "")
-                break
-
-        # Seed session state with pre-filled values right now, before tabs render
-        for table in tables:
-            tdata = rejected_prefill.get(table, {})
-            if tdata:
-                cols = get_table_columns(table, is_admin=False)
-                for col_info in cols:
-                    col  = col_info["column_name"]
-                    dtype = col_info["data_type"]
-                    raw_val = tdata.get(col)
-                    if raw_val is None:
-                        continue
-                    key = f"{table}_{col}"
-
-                    if dtype in ("integer", "bigint", "smallint"):
-                        try: st.session_state[key] = int(raw_val)
-                        except: st.session_state[key] = 0
-                    elif dtype in ("numeric", "double precision", "real"):
-                        try: st.session_state[key] = float(raw_val)
-                        except: st.session_state[key] = 0.0
-                    elif dtype == "date":
-                        import datetime
-                        if isinstance(raw_val, datetime.datetime):
-                            st.session_state[key] = raw_val.date()
-                        elif isinstance(raw_val, datetime.date):
-                            st.session_state[key] = raw_val
-                        elif isinstance(raw_val, str):
-                            try: st.session_state[key] = datetime.date.fromisoformat(raw_val[:10])
-                            except: st.session_state[key] = None
-                        else:
-                            st.session_state[key] = None
-                    else:
-                        st.session_state[key] = str(raw_val) if raw_val is not None else ""
-
-                st.session_state[f"{table}_initialized"] = True  # mark as done
-
-
-        # Consume the trigger so it doesn't fire again
-        st.session_state.resubmit_master_id = None
-        st.session_state.resubmit_module = None
-
-    # ---- Page Header ----
-    st.markdown(f"## 📊 {selected_module}")
-
-    # ---- Rejection banner (shown right after navigating via Resubmit) ----
-    if rejected_reason:
-        st.markdown(f"""
-<div style="background:#fef2f2;border:2px solid #ef4444;border-radius:14px;padding:18px 22px;margin-bottom:16px;">
-<div style="font-weight:700;font-size:16px;color:#991b1b;margin-bottom:6px;">✏️ Edit &amp; Resubmit Your Application</div>
-<div style="font-size:14px;color:#7f1d1d;margin-bottom:10px;"><b>Rejection Reason:</b> {rejected_reason}</div>
-<div style="font-size:13px;color:#b91c1c;">Your previous answers are pre-filled below. Make your corrections, save each section, then click <b>🚀 Submit</b>.</div>
-</div>
-""", unsafe_allow_html=True)
     # ---- Progress Section ----
-    percentage, completed, total = get_user_progress(user_id, tables)
+    percentage, completed, total = get_user_progress(user_id, tables, master_id=st.session_state.master_id)
 
-    # Update sidebar quick info
-    with st.sidebar:
-        st.markdown(f"""
-        <div style="margin-top:12px">
-        <div class="sidebar-section-title">Application Progress</div>
-        <div class="sidebar-info-card">
-            📋 <b>Sections:</b> {total}<br>
-            ✅ <b>Completed:</b> {completed}<br>
-            📊 <b>Progress:</b> {percentage:.0f}%
-        </div>
-        </div>
-        """, unsafe_allow_html=True)
+
+    # ---- Module Header & Breadcrumbs ----
+    st.markdown(f"""
+    <div style="margin-bottom:24px; display:flex; align-items:center; gap:8px; font-size:14px; color:#64748b;">
+        <span style="color:#1e293b; font-weight:600;">Main Page</span>
+        <span>/</span>
+        <span style="color:#1e293b; font-weight:600;">{selected_module}</span>
+    </div>
+    <div style="margin-bottom:20px;">
+        <h2 style="margin:0; color:#1e293b;">{selected_module}</h2>
+        <p style="margin:0; color:#64748b; font-size:15px;">Fill in all the sections below to complete your audit application.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     if percentage < 40:
         prog_color = "#ef4444"
@@ -1296,7 +1441,7 @@ if not is_admin:
     tab_labels = []
     for table in tables:
         section_name = table.replace(prefix, "").replace("_", " ").title()
-        is_complete = is_section_complete(user_id, table)
+        is_complete = is_section_complete(user_id, table, master_id=st.session_state.master_id)
         label = f"✅ {section_name}" if is_complete else f"⬜ {section_name}"
         tab_labels.append(label)
 
@@ -1304,13 +1449,17 @@ if not is_admin:
 
     # Read estimate fields from first tab draft
     first_table = tables[0]
-    first_table_draft = get_user_draft(first_table, user_id)
+    first_table_draft = get_user_draft(first_table, user_id, master_id=st.session_state.master_id)
 
     estimate_number = None
     year_of_estimate = None
     if first_table_draft:
         estimate_number = first_table_draft.get("estimate_number")
         year_of_estimate = first_table_draft.get("year_of_estimate")
+    elif module_name == "contract_management":
+        # Check for initial values from Main page
+        estimate_number = st.session_state.get("initial_estimate_number")
+        year_of_estimate = st.session_state.get("initial_year_of_estimate")
 
     for i, table in enumerate(tables):
 
@@ -1337,7 +1486,7 @@ if not is_admin:
 
             # Load draft into session state only once
             if f"{table}_initialized" not in st.session_state:
-                draft = get_user_draft(table, user_id)
+                draft = get_user_draft(table, user_id, master_id=st.session_state.master_id)
 
                 for col_info in columns:
                     col = col_info["column_name"]
@@ -1368,9 +1517,17 @@ if not is_admin:
                         elif dtype in ("numeric", "double precision", "real"):
                             st.session_state.setdefault(key, 0.0)
                         elif dtype == "date":
-                            st.session_state.setdefault(key, None)
+                            # Pre-fill initial estimate year if first tab
+                            if is_master_form and col == "year_of_estimate" and st.session_state.get("initial_year_of_estimate"):
+                                st.session_state.setdefault(key, st.session_state.initial_year_of_estimate)
+                            else:
+                                st.session_state.setdefault(key, None)
                         else:
-                            st.session_state.setdefault(key, "")
+                            # Pre-fill initial estimate number if first tab
+                            if is_master_form and col == "estimate_number" and st.session_state.get("initial_estimate_number"):
+                                st.session_state.setdefault(key, st.session_state.initial_estimate_number)
+                            else:
+                                st.session_state.setdefault(key, "")
 
                 st.session_state[f"{table}_initialized"] = True
 
@@ -1386,6 +1543,11 @@ if not is_admin:
 
                     for index, col_info in enumerate(columns):
                         col = col_info["column_name"]
+                        
+                        # Skip Estimate fields for non-contract modules
+                        if col in ["estimate_number", "year_of_estimate"] and module_name != "contract_management":
+                            continue
+                            
                         dtype = col_info["data_type"]
                         key = f"{table}_{col}"
 
@@ -1396,14 +1558,17 @@ if not is_admin:
                             if any(word in col.lower() for word in money_keywords):
                                 label = f"{label} (₹)"
 
+                            # Disable estimate fields for contract_management
+                            is_disabled = (module_name == "contract_management" and col in ["estimate_number", "year_of_estimate"])
+
                             if dtype in ("integer", "bigint", "smallint"):
-                                value = st.number_input(label, step=1, key=key)
+                                value = st.number_input(label, step=1, key=key, disabled=is_disabled)
 
                             elif dtype in ("numeric", "double precision", "real"):
-                                value = st.number_input(label, key=key)
+                                value = st.number_input(label, key=key, disabled=is_disabled)
 
                             elif dtype == "date":
-                                value = st.date_input(label, key=key)
+                                value = st.date_input(label, key=key, disabled=is_disabled)
 
                             elif dtype == "boolean" or dtype == "bool":
                                 bool_options = ["", "Yes", "No"]
@@ -1413,7 +1578,7 @@ if not is_admin:
                                     idx = 1
                                 elif curr_val is False or str(curr_val).lower() == "false":
                                     idx = 2
-                                selection = st.selectbox(label, options=bool_options, index=idx, key=f"{key}_select")
+                                selection = st.selectbox(label, options=bool_options, index=idx, key=f"{key}_select", disabled=is_disabled)
                                 if selection == "Yes":
                                     value = True
                                 elif selection == "No":
@@ -1421,10 +1586,10 @@ if not is_admin:
                                 else:
                                     value = None
                             else:
-                                value = st.text_input(label, key=key)
+                                value = st.text_input(label, key=key, disabled=is_disabled)
 
                         form_data[col] = value
-                        if value not in ("", None, 0, 0.0):
+                        if col not in ["estimate_number", "year_of_estimate"] and value not in ("", None, 0, 0.0):
                             filled_fields += 1
 
                     submitted = st.form_submit_button("💾 Save Section", use_container_width=True, type="primary")
@@ -1455,9 +1620,31 @@ if not is_admin:
                                     st.error(f"⚠️ {disp} is required. Please fill it in before saving.")
                                     st.stop()
 
-                    save_draft_record(table, form_data, user_id)
-                    st.success("✅ Section saved successfully!")
-                    st.rerun()
+                    # Atomic master creation and save
+                    target_master_id = st.session_state.master_id
+                    is_new_app = (target_master_id is None)
+
+                    if is_new_app:
+                        try:
+                            target_master_id = create_master_submission(
+                                user_id, module_name, tables, 
+                                status='DRAFT',
+                                estimate_number=estimate_number,
+                                year_of_estimate=year_of_estimate
+                            )
+                        except Exception as e:
+                            st.error(f"❌ Failed to create application: {e}")
+                            st.stop()
+                    
+                    try:
+                        save_draft_record(table, form_data, user_id, master_id=target_master_id)
+                        st.session_state.master_id = target_master_id
+                        st.success("✅ Section saved successfully!")
+                        st.toast("📝 Application saved to drafts.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Failed to save section: {e}")
+                        st.stop()
 
             # ---- OTHER TABS ----
             else:
@@ -1523,8 +1710,8 @@ if not is_admin:
                             value = st.text_input(label, key=key)
 
                     form_data[col] = value
-                    # Count filled fields based on the value from the widget (which is also in session_state)
-                    if value not in ("", None, 0, 0.0):
+                    # Count filled fields excluding auto-filled estimate fields
+                    if col not in ["estimate_number", "year_of_estimate"] and value not in ("", None, 0, 0.0):
                         filled_fields += 1
 
                 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -1536,7 +1723,7 @@ if not is_admin:
                         st.stop()
 
                     if not can_edit:
-                        st.warning("🔒 This application has been submitted and cannot be edited unless it is rejected.")
+                        st.warning("🔒 This application has been submitted and cannot be edited.")
 
                     elif filled_fields == 0:
                         st.warning("⚠️ Please fill in at least one field before saving.")
@@ -1547,13 +1734,39 @@ if not is_admin:
                             form_data["estimate_number"] = estimate_number
                         if "year_of_estimate" in table_col_names:
                             form_data["year_of_estimate"] = year_of_estimate
-                        save_draft_record(table, form_data, user_id)
-                        st.success("✅ Section saved successfully!")
-                        st.rerun()
+                        # Atomic master creation and save
+                        target_master_id = st.session_state.master_id
+                        is_new_app = (target_master_id is None)
+
+                        if is_new_app:
+                            try:
+                                target_master_id = create_master_submission(
+                                    user_id, module_name, tables, 
+                                    status='DRAFT',
+                                    estimate_number=estimate_number,
+                                    year_of_estimate=year_of_estimate
+                                )
+                            except Exception as e:
+                                err_str = str(e).lower()
+                                if "unique_estimate" in err_str or "duplicate key" in err_str:
+                                    st.error(f"⚠️ An application with Estimate No: **{estimate_number}** and Year: **{year_of_estimate}** already exists for this module. Please use a unique combination.")
+                                else:
+                                    st.error(f"❌ Failed to create application: {e}")
+                                st.stop()
+                        
+                        try:
+                            save_draft_record(table, form_data, user_id, master_id=target_master_id)
+                            st.session_state.master_id = target_master_id
+                            st.success("✅ Section saved successfully!")
+                            st.toast("📝 Application saved to drafts.")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Failed to save section: {e}")
+                            st.stop()
 
     # ---------- FINAL SUBMIT ----------
 
-    incomplete_sections = get_incomplete_forms(user_id, tables)
+    incomplete_sections = get_incomplete_forms(user_id, tables, master_id=st.session_state.master_id)
 
     st.markdown("""
     <div class="submit-cta">
@@ -1571,20 +1784,18 @@ if not is_admin:
             st.markdown(f"&nbsp;&nbsp;&nbsp;**{i}.** {clean_name}")
     else:
         if st.button("🚀 Submit My Complete Application", use_container_width=True, type="primary"):
-            create_master_submission(user_id, module_name, tables)
-            current_master_id = st.session_state.master_id
-            delete_user_drafts(current_master_id, tables)
-            st.session_state.master_id = None
-
-            for table in tables:
-                for key in list(st.session_state.keys()):
-                    if key.startswith(f"{table}_"):
-                        del st.session_state[key]
-
-            st.toast("🎉 Application submitted successfully! You'll be notified once it's reviewed.")
-            import time
-            time.sleep(5)
-            st.rerun()
+            # Simply update status from DRAFT to COMPLETED
+            success = update_master_status(st.session_state.master_id, 'COMPLETED')
+            if success:
+                # Mark all associated draft rows as non-draft
+                set_drafts_to_final(st.session_state.master_id, tables)
+                st.balloons()
+                st.success("🎉 Application submitted successfully!")
+                st.session_state.master_id = None
+                st.session_state.current_view = "Main"
+                st.rerun()
+            else:
+                st.error("Failed to submit. Please try again.")
 
 
 # =====================================================
@@ -1596,10 +1807,19 @@ if is_admin:
     if "status_filter" not in st.session_state:
         st.session_state.status_filter = "ALL"
 
-    st.markdown("""
-    <div class="admin-banner">
-        <h2>🛡️ Admin Review Panel</h2>
-        <p>Review submitted applications, manage users, and download PDF reports.</p>
+    # --- TRIGGER SUBMISSION DETAILS FROM MODAL ---
+    if st.session_state.get("sub_to_view"):
+        sub_to_view = st.session_state.get("sub_to_view")
+        mode = st.session_state.get("sub_view_mode", "admin")
+        del st.session_state["sub_to_view"]
+        if "sub_view_mode" in st.session_state:
+            del st.session_state["sub_view_mode"]
+        show_submission_details(sub_to_view, mode=mode)
+
+    st.markdown(f"""
+    <div class="hero-banner" style="background: linear-gradient(135deg, #4338ca, #312e81);">
+        <h1>🛡️ Admin Review Panel</h1>
+        <p>Review submitted applications from all users, manage field officer accounts, and export official reports.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1759,15 +1979,13 @@ if is_admin:
                     # Aggregate submissions from all non-admin users
                     all_masters = []
                     all_drafts = []
-                    agg_approved = agg_rejected = agg_pending = agg_drafts = 0
+                    agg_pending = agg_drafts = 0
 
                     for _, u_row in users_df.iterrows():
                         uid = int(u_row["id"])
                         uname = u_row["username"]
-                        u_approved, u_rejected, u_pending, u_drafts = get_user_master_status_counts(uid, all_modules)
-                        agg_approved += u_approved
-                        agg_rejected += u_rejected
-                        agg_pending  += u_pending
+                        u_submitted, u_drafts = get_user_master_status_counts(uid, all_modules)
+                        agg_pending  += u_submitted
                         agg_drafts   += u_drafts
 
                         u_masters = get_user_master_submissions_admin(uid)
@@ -1778,14 +1996,12 @@ if is_admin:
                             d["created_by_user"] = uname
                         all_drafts.extend(u_draft_sums)
 
-                    total = agg_approved + agg_rejected + agg_pending + agg_drafts
+                    total = agg_pending + agg_drafts
+                    submitted = agg_pending
+                    
                     submissions = all_masters + all_drafts
-                    # Sort by created_at descending
-                    submissions.sort(
-                        key=lambda x: str(x.get("created_at") or ""),
-                        reverse=True
-                    )
-
+                    submissions.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
+                    
                     st.markdown("#### 📊 Submission Overview Of – All Users")
                     if total == 0:
                         st.markdown("""
@@ -1795,13 +2011,13 @@ if is_admin:
                         </div>
                         """, unsafe_allow_html=True)
                     else:
-                        render_metric_cards(total, agg_approved, agg_pending, agg_rejected,
-                                            st.session_state.status_filter, card_type="admin", drafts=agg_drafts)
+                        render_metric_cards(total, submitted, agg_drafts,
+                                            st.session_state.status_filter, card_type="admin")
 
                 else:
                     # Single user
-                    approved, rejected, pending, drafts = get_user_master_status_counts(selected_user_id, all_modules)
-                    total = approved + rejected + pending + drafts
+                    submitted, drafts = get_user_master_status_counts(selected_user_id, all_modules)
+                    total = submitted + drafts
 
                     st.markdown(f"#### 📊 Submission Overview Of – {selected_user}")
                     if total == 0:
@@ -1813,8 +2029,8 @@ if is_admin:
                         </div>
                         """, unsafe_allow_html=True)
                     else:
-                        render_metric_cards(total, approved, pending, rejected,
-                                            st.session_state.status_filter, card_type="admin", drafts=drafts)
+                        render_metric_cards(total, submitted, drafts,
+                                            st.session_state.status_filter, card_type="admin")
 
                     masters = get_user_master_submissions_admin(selected_user_id)
                     draft_summaries = get_user_draft_summaries(selected_user_id, all_modules)
@@ -1826,79 +2042,106 @@ if is_admin:
 
                 # ---- Submission List ----
                 if submissions:
-                    if st.session_state.status_filter != "ALL":
-                        filtered_subs = [s for s in submissions if s["status"] == st.session_state.status_filter]
+                    if st.session_state.status_filter == "COMPLETED":
+                        filtered_subs = [s for s in submissions if s["status"] != "DRAFT"]
+                    elif st.session_state.status_filter == "DRAFT":
+                        filtered_subs = [s for s in submissions if s["status"] == "DRAFT"]
                     else:
                         filtered_subs = submissions
                     
                     if not filtered_subs:
                         st.info(f"No {st.session_state.status_filter.lower()} items found." if st.session_state.status_filter != "ALL" else "No items found.")
                     else:
+                        # --- Group by Estimate for Simplified View ---
+                        admin_groups = {}
+                        for item in filtered_subs:
+                            e_no = item.get("estimate_number") or "---"
+                            e_yr = item.get("year_of_estimate") or "---"
+                            status = item.get("status", "DRAFT")
+                            yr_val = getattr(e_yr, 'year', e_yr)
+                            g_key = (str(e_no).strip().lower(), str(yr_val))
+                            
+                            if g_key not in admin_groups:
+                                admin_groups[g_key] = {
+                                    "estimate_number": e_no,
+                                    "year_of_estimate": e_yr,
+                                    "latest_date": item.get("created_at"),
+                                    "total_count": 1,
+                                    "draft_count": 1 if status == "DRAFT" else 0
+                                }
+                            else:
+                                admin_groups[g_key]["total_count"] += 1
+                                if status == "DRAFT":
+                                    admin_groups[g_key]["draft_count"] += 1
+                                if (item.get("created_at") or "") > (admin_groups[g_key]["latest_date"] or ""):
+                                    admin_groups[g_key]["latest_date"] = item.get("created_at")
+                                    
+                        display_list = sorted(admin_groups.values(), key=lambda x: str(x["latest_date"] or ""), reverse=True)
+                        
                         st.markdown("#### 📋 Activity List")
-                        paged_subs, start_idx, total_pages = paginate_list(filtered_subs, "admin_review_page", render_controls=False)
+                        paged_subs, start_idx, total_pages = paginate_list(display_list, "admin_review_page", render_controls=False)
 
-                        # Tabular Header — show Submitted By column when All Users is selected
-                        if is_all_users:
-                            h1, h2, h3, h4, h5, h6 = st.columns([0.5, 2, 1.5, 1.5, 1.5, 1.5])
-                            h1.markdown("**S.No**")
-                            h2.markdown("**Module Name**")
-                            h3.markdown("**Submitted By**")
-                            h4.markdown("**Submitted Date**")
-                            h5.markdown("**Status**")
-                            h6.markdown("**Action**")
-                        else:
-                            h1, h2, h3, h4, h5 = st.columns([0.5, 2, 1.8, 1.2, 1])
-                            h1.markdown("**S.No**")
-                            h2.markdown("**Module Name**")
-                            h3.markdown("**Submitted Date**")
-                            h4.markdown("**Status**")
-                            h5.markdown("**Action**")
-                        st.markdown("<hr style='margin:0; margin-bottom:10px;'>", unsafe_allow_html=True)
+                        st.markdown('<div class="estimate-link-list">', unsafe_allow_html=True)
+                        # Enhanced Header: Style with CSS classes
+                        st.markdown("""
+                        <div class="activity-header">
+                            <div style="display: flex; align-items: center; gap: 0;">
+                                <div style="flex: 0.5;"><span>S.No</span></div>
+                                <div style="flex: 2.5; padding-left: 20px;"><span>Estimate Number</span></div>
+                                <div style="flex: 2.0; text-align: center;"><span>Total Applications</span></div>
+                                <div style="flex: 2.0; text-align: center;"><span>Drafted</span></div>
+                                <div style="flex: 2.0; text-align: center;"><span>Completed</span></div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
 
-                        for i, sub in enumerate(paged_subs):
+                        for i, group in enumerate(paged_subs):
                             s_no = start_idx + i + 1
-                            module_name = sub.get("module")
-                            module_label = (module_name or "Unknown").replace("_", " ").title()
-                            status = sub["status"]
-                            submitted_by = sub.get("created_by_user") or "—"
-
-                            if status == "APPROVED":
-                                badge_html = '<span class="badge badge-approved" style="padding:2px 8px; font-size:11px;">✅ Approved</span>'
-                            elif status == "REJECTED":
-                                badge_html = '<span class="badge badge-rejected" style="padding:2px 8px; font-size:11px;">❌ Rejected</span>'
-                            elif status == "DRAFT":
-                                badge_html = '<span class="badge" style="padding:2px 8px; font-size:11px; background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0;">📝 Draft</span>'
-                            else:
-                                badge_html = '<span class="badge badge-pending" style="padding:2px 8px; font-size:11px;">🕐 Pending</span>'
-
-                            created_at  = sub.get("created_at", "")
-                            approved_at = sub.get("approved_at", "")
-                            rejected_at = sub.get("rejected_at", "")
-                            reason      = sub.get("rejection_reason", "")
-
-                            submitted_str = fmt_dt(created_at)
-
-                            if is_all_users:
-                                r1, r2, r3, r4, r5, r6 = st.columns([0.5, 2, 1.5, 1.5, 1.5, 1.5])
-                                r1.write(f"{s_no}")
-                                r2.write(module_label)
-                                r3.write(submitted_by)
-                                r4.write(submitted_str)
-                                r5.markdown(badge_html, unsafe_allow_html=True)
-                                with r6:
-                                    btn_label = "🔍 View" if status == "DRAFT" else "🔍 Review"
-                                    if st.button(btn_label, key=f"btn_rev_{sub['id']}_{i}", use_container_width=True):
-                                        show_submission_details(sub, mode="admin")
-                            else:
-                                r1, r2, r3, r4, r5 = st.columns([0.5, 2.5, 2, 1.5, 1.5])
-                                r1.write(f"{s_no}")
-                                r2.write(module_label)
-                                r3.write(submitted_str)
-                                r4.markdown(badge_html, unsafe_allow_html=True)
-                                with r5:
-                                    btn_label = "🔍 View" if status == "DRAFT" else "🔍 Review"
-                                    if st.button(btn_label, key=f"btn_rev_{sub['id']}_{i}", use_container_width=True):
-                                        show_submission_details(sub, mode="admin")
+                            est_no = group["estimate_number"]
+                            est_yr = group["year_of_estimate"]
+                            total_c = group["total_count"]
+                            draft_c = group["draft_count"]
+                            completed_c = total_c - draft_c
+                            
+                            # Row Card Start
+                            st.markdown(f'<div class="activity-card">', unsafe_allow_html=True)
+                            
+                            r1, r2, r3, r4, r5 = st.columns([0.5, 2.5, 2.0, 2.0, 2.0])
+                            
+                            with r1:
+                                st.markdown(f"<div style='padding-top:8px; font-weight:700; color:#64748b;'>#{s_no}</div>", unsafe_allow_html=True)
+                            
+                            with r2:
+                                if est_no and est_no != "---":
+                                    if st.button(f"**{est_no}**", key=f"adv_btn_est_grp_{i}_{est_no}", use_container_width=True):
+                                        show_estimate_group_dialog(est_no, est_yr)
+                                else:
+                                    st.markdown("<div style='padding-top:8px; color:#94a3b8;'>---</div>", unsafe_allow_html=True)
+                            
+                            with r3:
+                                st.markdown(f"""
+                                <div style='text-align:center; padding-top:4px;'>
+                                    <span class="activity-badge badge-total-count">{total_c}</span>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            with r4:
+                                st.markdown(f"""
+                                <div style='text-align:center; padding-top:4px;'>
+                                    <span class="activity-badge badge-draft-count">{draft_c}</span>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                            with r5:
+                                st.markdown(f"""
+                                <div style='text-align:center; padding-top:4px;'>
+                                    <span class="activity-badge badge-comp-count">{completed_c}</span>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            st.markdown("</div>", unsafe_allow_html=True) # Row Card End
+                        
+                        st.markdown('</div>', unsafe_allow_html=True)
                         
                         # Navigation at bottom
                         render_pagination_footer("admin_review_page", total_pages)

@@ -1,4 +1,5 @@
 import psycopg2
+import datetime
 from psycopg2 import pool
 import pandas as pd
 import streamlit as st
@@ -16,11 +17,10 @@ import os
 
 @st.cache_resource
 def get_db_pool():
-    # Using SimpleConnectionPool because Streamlit threading model
-    # sometimes causes ThreadedConnectionPool to lose track of keys
-    return psycopg2.pool.SimpleConnectionPool(
-        1, 20,
-        host=os.getenv("DB_HOST", "host.docker.internal"),
+    # Using ThreadedConnectionPool for multi-threaded Streamlit application
+    return psycopg2.pool.ThreadedConnectionPool(
+        1, 50,
+        host=os.getenv("DB_HOST", "localhost"),
         database=os.getenv("DB_NAME", "Irrigation"),
         user=os.getenv("DB_USER", "postgres"),
         password=os.getenv("DB_PASSWORD", "123456"),
@@ -105,7 +105,7 @@ def get_next_cycle(user_id, module):
 
 
 # ================= SAVE DRAFT =================
-def save_draft_record(table, data, user_id):
+def save_draft_record(table, data, user_id, master_id=None):
     user_id = int(user_id)
     conn = None
     cur = None
@@ -136,30 +136,38 @@ def save_draft_record(table, data, user_id):
         conn = get_connection()
         cur = conn.cursor()
 
-        # STEP 1: Fetch existing draft rows
-        check_query = sql.SQL("""
-            SELECT id FROM {table}
-            WHERE created_by=%s AND is_draft=TRUE
-            ORDER BY id DESC
-        """).format(table=sql.Identifier(table))
+        # STEP 1: Fetch existing draft rows for this master_id (or old-style NULL master_id)
+        if master_id:
+            check_query = sql.SQL("""
+                SELECT id FROM {table}
+                WHERE created_by=%s AND master_id=%s AND is_draft=TRUE
+                ORDER BY id DESC
+            """).format(table=sql.Identifier(table))
+            cur.execute(check_query, (user_id, master_id))
+        else:
+            check_query = sql.SQL("""
+                SELECT id FROM {table}
+                WHERE created_by=%s AND master_id IS NULL AND is_draft=TRUE
+                ORDER BY id DESC
+            """).format(table=sql.Identifier(table))
+            cur.execute(check_query, (user_id,))
 
-        cur.execute(check_query, (user_id,))
         existing_rows = cur.fetchall()
 
         if existing_rows:
 
             latest_id = existing_rows[0][0]
 
-            # Delete older drafts
+            # Delete older duplicates if any
             if len(existing_rows) > 1:
                 delete_query = sql.SQL("""
                     DELETE FROM {table}
                     WHERE created_by=%s
                     AND is_draft=TRUE
                     AND id<>%s
+                    AND (master_id=%s OR (master_id IS NULL AND %s IS NULL))
                 """).format(table=sql.Identifier(table))
-
-                cur.execute(delete_query, (user_id, latest_id))
+                cur.execute(delete_query, (user_id, latest_id, master_id, master_id))
 
             # Update latest draft
             set_clause = sql.SQL(", ").join(
@@ -178,22 +186,29 @@ def save_draft_record(table, data, user_id):
 
         else:
             # Insert new draft
+            all_cols = safe_cols + ["created_by", "is_draft", "created_at"]
+            all_vals = clean_vals + [user_id, True, datetime.datetime.now()]
+            
+            if master_id:
+                all_cols.append("master_id")
+                all_vals.append(master_id)
+
             insert_query = sql.SQL("""
-                INSERT INTO {table} ({fields}, created_by, is_draft, created_at)
-                VALUES ({placeholders}, %s, TRUE, NOW())
+                INSERT INTO {table} ({fields})
+                VALUES ({placeholders})
             """).format(
                 table=sql.Identifier(table),
-                fields=sql.SQL(", ").join(map(sql.Identifier, safe_cols)),
-                placeholders=sql.SQL(", ").join(sql.Placeholder() for _ in safe_cols),
+                fields=sql.SQL(", ").join(map(sql.Identifier, all_cols)),
+                placeholders=sql.SQL(", ").join(sql.Placeholder() for _ in all_cols),
             )
 
-            cur.execute(insert_query, clean_vals + [user_id])
+            cur.execute(insert_query, all_vals)
 
         conn.commit()
     except Exception as e:
-        st.error(f"Error saving draft record: {e}")
         if conn:
             conn.rollback()
+        raise e
     finally:
         if cur:
             cur.close()
@@ -202,7 +217,7 @@ def save_draft_record(table, data, user_id):
 
 
 # ================= CREATE MASTER SUBMISSION =================
-def create_master_submission(user_id, module, tables):
+def create_master_submission(user_id, module, tables, status='COMPLETED', estimate_number=None, year_of_estimate=None):
     user_id = int(user_id)
     cycle = get_next_cycle(user_id, module)
 
@@ -214,33 +229,60 @@ def create_master_submission(user_id, module, tables):
 
         cur.execute(
             """
-            INSERT INTO master_submission (user_id, cycle, status, module, created_at)
-            VALUES (%s, %s, 'PENDING', %s, NOW())
+            INSERT INTO master_submission (user_id, cycle, status, module, created_at, estimate_number, year_of_estimate)
+            VALUES (%s, %s, %s, %s, NOW(), %s, %s)
             RETURNING id
         """,
-            (user_id, cycle, module),
+            (user_id, cycle, status, module, estimate_number, year_of_estimate),
         )
 
         master_id = cur.fetchone()[0]
 
-        # Attach drafts only for this module
+        # Always attach any unattached drafts for this user to the new master_id
         for table in tables:
             cur.execute(
                 f"""
                 UPDATE "{table}"
-                SET is_draft=FALSE,
-                    master_id=%s
+                SET master_id=%s,
+                    is_draft=TRUE
                 WHERE created_by=%s
-                AND is_draft=TRUE
+                AND master_id IS NULL
             """,
                 (master_id, user_id),
             )
 
         conn.commit()
+        return master_id
     except Exception as e:
-        st.error(f"Error creating master submission: {e}")
         if conn:
             conn.rollback()
+        raise e
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_connection(conn)
+
+
+# ================= UPDATE MASTER STATUS =================
+def update_master_status(master_id, status):
+    master_id = int(master_id)
+    conn = None
+    cur = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE master_submission SET status = %s WHERE id = %s",
+            (status, master_id)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        st.error(f"Error updating master status: {e}")
+        if conn:
+            conn.rollback()
+        return False
     finally:
         if cur:
             cur.close()
@@ -264,6 +306,7 @@ def get_user_master_submissions(user_id, module):
                 JOIN users u ON m.user_id = u.id
                 WHERE m.user_id=%s
                 AND m.module=%s
+                AND m.status = 'COMPLETED'
                 ORDER BY m.cycle DESC
             """, (user_id, module))
         else:
@@ -272,6 +315,7 @@ def get_user_master_submissions(user_id, module):
                 FROM master_submission m
                 JOIN users u ON m.user_id = u.id
                 WHERE m.user_id=%s
+                AND m.status = 'COMPLETED'
                 ORDER BY m.cycle DESC
             """, (user_id,))
             
@@ -300,6 +344,7 @@ def get_user_master_submissions_admin(user_id):
             FROM master_submission m
             JOIN users u ON m.user_id = u.id
             WHERE m.user_id=%s
+            AND m.status = 'COMPLETED'
             ORDER BY m.cycle DESC
         """, (user_id,))
 
@@ -308,6 +353,47 @@ def get_user_master_submissions_admin(user_id):
         return records
     except Exception as e:
         st.error(f"Error getting admin submissions: {e}")
+        return []
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_connection(conn)
+
+
+def get_submissions_by_estimate(est_no, est_yr, user_id=None):
+    """
+    Fetches all master_submission records matching a specific estimate number and year.
+    If user_id is provided, filters for that user.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        query = """
+            SELECT m.*, u.username as created_by_user
+            FROM master_submission m
+            JOIN users u ON m.user_id = u.id
+            WHERE LOWER(m.estimate_number) = LOWER(%s) 
+              AND EXTRACT(YEAR FROM m.year_of_estimate) = EXTRACT(YEAR FROM %s::DATE)
+        """
+        params = [est_no, est_yr]
+
+        if user_id:
+            query += " AND m.user_id = %s"
+            params.append(user_id)
+
+        query += " ORDER BY m.created_at DESC"
+
+        cur.execute(query, params)
+        
+        columns = [desc[0] for desc in cur.description]
+        records = [dict(zip(columns, row)) for row in cur.fetchall()]
+        return records
+    except Exception as e:
+        st.error(f"Error getting submissions by estimate: {e}")
         return []
     finally:
         if cur:
@@ -379,170 +465,129 @@ def get_full_draft_data(user_id, module_tables):
     return full_data
 
 
-# ================= APPROVE MASTER =================
-def approve_master_submission(master_id):
-    conn = None
-    cur = None
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-
-        # 1️⃣ Update master table
-        cur.execute(
-            """
-            UPDATE master_submission
-            SET status='APPROVED',
-                approved_at=NOW()
-            WHERE id=%s
-        """,
-            (master_id,),
-        )
-
-        # 2️⃣ Update all related form tables
-        tables = get_all_tables(conn)
-
-        for table in tables:
-            update_query = sql.SQL("""
-                UPDATE {table}
-                SET approval_status='APPROVED'
-                WHERE master_id=%s
-            """).format(table=sql.Identifier(table))
-
-            cur.execute(update_query, (master_id,))
-
-        conn.commit()
-    except Exception as e:
-        st.error(f"Error approving master submission: {e}")
-        if conn:
-            conn.rollback()
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
 
 
-# ================= REJECT MASTER =================
-def reject_master_submission(master_id, reason):
-    conn = None
-    cur = None
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-
-        # 1️⃣ Update master table
-        cur.execute(
-            """
-            UPDATE master_submission
-            SET status='REJECTED',
-                rejection_reason=%s,
-                rejected_at=NOW()
-            WHERE id=%s
-        """,
-            (reason, master_id),
-        )
-
-        # 2️⃣ Update all related form tables
-        tables = get_all_tables(conn)
-
-        for table in tables:
-            update_query = sql.SQL("""
-                UPDATE {table}
-                SET approval_status='REJECTED'
-                WHERE master_id=%s
-            """).format(table=sql.Identifier(table))
-
-            cur.execute(update_query, (master_id,))
-
-        conn.commit()
-    except Exception as e:
-        st.error(f"Error rejecting master submission: {e}")
-        if conn:
-            conn.rollback()
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
-
-
-# ================= USER PROGRESS =================
-def get_user_progress(user_id, tables):
+def get_user_progress(user_id, tables, master_id=None):
+    """Returns (percentage, completed_count, total_count) based on master_id."""
     user_id = int(user_id)
-
+    if not tables:
+        return 0, 0, 0
+        
     conn = None
     cur = None
-    total = len(tables)
     completed = 0
+    total = len(tables)
 
     try:
         conn = get_connection()
         cur = conn.cursor()
-
-        if tables:
-            union_queries = []
-            for table in tables:
-                union_queries.append(f"""
-                    SELECT '{table}'
-                    WHERE EXISTS (
-                        SELECT 1 FROM "{table}" WHERE created_by=%s AND is_draft=TRUE
+        
+        # Use UNION ALL to check all 100+ tables efficiently
+        checks = []
+        for table in tables:
+            if master_id:
+                checks.append(f"""
+                    SELECT '{table}' WHERE EXISTS (
+                        SELECT 1 FROM "{table}" WHERE created_by=%s AND master_id=%s
                     )
                 """)
-            combined_query = " UNION ALL ".join(union_queries)
-            cur.execute(combined_query, [user_id] * len(tables))
-            completed = len(cur.fetchall())
+            else:
+                checks.append(f"""
+                    SELECT '{table}' WHERE EXISTS (
+                        SELECT 1 FROM "{table}" WHERE created_by=%s AND master_id IS NULL
+                    )
+                """)
+        
+        if checks:
+            combined = " UNION ALL ".join(checks)
+            params = []
+            for _ in tables:
+                if master_id:
+                    params.extend([user_id, master_id])
+                else:
+                    params.append(user_id)
+            
+            cur.execute(combined, params)
+            rows = cur.fetchall()
+            completed = len(rows)
 
     except Exception as e:
-        st.error(f"Error getting user progress: {e}")
+        raise e
     finally:
         if cur:
             cur.close()
         if conn:
             release_connection(conn)
 
-    percentage = int((completed / total) * 100) if total > 0 else 0
-
+    percentage = (completed / total) * 100 if total > 0 else 0
     return percentage, completed, total
 
 
-# ================= INCOMPLETE SECTIONS =================
-def get_incomplete_forms(user_id, tables):
-    user_id = int(user_id)
+def set_drafts_to_final(master_id, tables):
+    """Marks all rows for a master_id as is_draft=FALSE."""
+    master_id = int(master_id)
     conn = None
     cur = None
-    incomplete = []
-
     try:
         conn = get_connection()
         cur = conn.cursor()
+        for table in tables:
+            cur.execute(
+                f'UPDATE "{table}" SET is_draft=FALSE WHERE master_id=%s',
+                (master_id,)
+            )
+        conn.commit()
+    except Exception as e:
+        st.error(f"Error finalizing drafts: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_connection(conn)
 
-        if tables:
-            union_queries = []
+
+# ================= INCOMPLETE SECTIONS =================
+def get_incomplete_forms(user_id, tables, master_id=None):
+    """Returns a list of tables missing a completed entry for the specific application."""
+    user_id = int(user_id)
+    if not tables:
+        return []
+
+    # Calculate incomplete by subtracting completed from total
+    percentage, completed_count, total_count = get_user_progress(user_id, tables, master_id=master_id)
+    
+    # Actually, to get EXACT table names that are incomplete, we need the inverse of the UNION ALL
+    conn = None
+    cur = None
+    incomplete = []
+    
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        
+        # Get list of completed tables first
+        checks = []
+        for table in tables:
+            if master_id:
+                checks.append(f"SELECT '{table}' WHERE EXISTS (SELECT 1 FROM \"{table}\" WHERE created_by=%s AND master_id=%s)")
+            else:
+                checks.append(f"SELECT '{table}' WHERE EXISTS (SELECT 1 FROM \"{table}\" WHERE created_by=%s AND is_draft=TRUE)")
+        
+        if checks:
+            combined = " UNION ALL ".join(checks)
             params = []
-            for table in tables:
-                columns = get_table_columns(table, is_admin=False)
-                business_cols = [col["column_name"] for col in columns]
-
-                if not business_cols:
-                    incomplete.append(table)
-                    continue
-
-                conditions = " OR ".join([f'"{col}" IS NOT NULL' for col in business_cols])
-
-                union_queries.append(f"""
-                    SELECT '{table}'
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM "{table}"
-                        WHERE created_by=%s AND is_draft=TRUE AND ({conditions})
-                    )
-                """)
-                params.append(user_id)
+            for _ in tables:
+                if master_id:
+                    params.extend([user_id, master_id])
+                else:
+                    params.append(user_id)
+                    
+            cur.execute(combined, params)
+            completed_tables = [row[0] for row in cur.fetchall()]
+            incomplete = [t for t in tables if t not in completed_tables]
             
-            if union_queries:
-                combined_query = " UNION ALL ".join(union_queries)
-                cur.execute(combined_query, params)
-                incomplete.extend([row[0] for row in cur.fetchall()])
-
     except Exception as e:
         st.error(f"Error getting incomplete forms: {e}")
     finally:
@@ -550,67 +595,58 @@ def get_incomplete_forms(user_id, tables):
             cur.close()
         if conn:
             release_connection(conn)
+            
+    return incomplete
 
     return incomplete
 
 
-# ================= GET DRAFT SUMMARIES =================
 def get_user_draft_summaries(user_id, all_modules):
     """
-    Scans all modules to see if a user has any records with is_draft=TRUE.
-    Returns a list of synthetic 'submission' dicts with status='DRAFT'.
+    Fetches all master_submission records for a user that have status='DRAFT'.
     """
     user_id = int(user_id)
     conn = None
     cur = None
-    draft_summaries = []
-
     try:
         conn = get_connection()
         cur = conn.cursor()
 
-        for module_prefix, tables in all_modules.items():
-            if not tables:
-                continue
+        cur.execute("""
+            SELECT m.*, u.username as created_by_user
+            FROM master_submission m
+            JOIN users u ON m.user_id = u.id
+            WHERE m.user_id=%s AND m.status='DRAFT'
+            ORDER BY m.created_at DESC
+        """, (user_id,))
             
-            # Use UNION ALL to check if any table in this module has a draft
-            checks = []
-            params = []
-            for table in tables:
-                checks.append(f"""
-                    SELECT created_at as dt
-                    FROM "{table}" 
-                    WHERE created_by=%s AND is_draft=TRUE
-                """)
-                params.append(user_id)
-            
-            combined = " UNION ALL ".join(checks) + " ORDER BY 1 DESC NULLS LAST LIMIT 1"
-            
-            cur.execute(combined, params)
-            row = cur.fetchone()
-            
-            if row:
-                draft_summaries.append({
-                    "id": f"draft_{module_prefix}",
-                    "user_id": user_id,
-                    "cycle": "N/A",
-                    "status": "DRAFT",
-                    "module": module_prefix,
-                    "created_at": row[0],
-                    "approved_at": None,
-                    "rejection_reason": None,
-                    "created_by_user": None # Will be filled by caller if needed
-                })
-
+        columns = [desc[0] for desc in cur.description]
+        records = [dict(zip(columns, row)) for row in cur.fetchall()]
+        
+        # Filter out empty drafts (those with zero progress)
+        final_records = []
+        for rec in records:
+            m_id = rec["id"]
+            m_key = rec.get("module")
+            if m_key and m_key in all_modules:
+                m_tables = all_modules[m_key]
+                _, completed, _ = get_user_progress(user_id, m_tables, master_id=m_id)
+                if completed > 0:
+                    final_records.append(rec)
+            else:
+                # If module info is missing, we keep it to be safe or skip?
+                # For now, let's keep it if we can't verify it's empty.
+                final_records.append(rec)
+        
+        return final_records
     except Exception as e:
         st.error(f"Error getting draft summaries: {e}")
+        return []
     finally:
         if cur:
             cur.close()
         if conn:
             release_connection(conn)
-
-    return draft_summaries
 
 
 # ================= STATUS COUNTS =================
@@ -623,24 +659,16 @@ def get_user_master_status_counts(user_id, all_modules=None):
     try:
         conn = get_connection()
 
-        df = pd.read_sql(
+        cur = conn.cursor()
+        cur.execute(
             """
-            SELECT status, COUNT(*)
+            SELECT COUNT(*)
             FROM master_submission
-            WHERE user_id=%s
-            GROUP BY status
+            WHERE user_id=%s AND status='COMPLETED'
         """,
-            conn,
-            params=[user_id],
+            (user_id,),
         )
-
-        for _, row in df.iterrows():
-            if row["status"] == "APPROVED":
-                approved = row["count"]
-            elif row["status"] == "REJECTED":
-                rejected = row["count"]
-            else:
-                pending = row["count"]
+        submitted = cur.fetchone()[0]
         
         # If all_modules provided, count modules with drafts
         if all_modules:
@@ -653,12 +681,27 @@ def get_user_master_status_counts(user_id, all_modules=None):
         if conn:
             release_connection(conn)
 
-    if all_modules:
-        return approved, rejected, pending, drafts
-    return approved, rejected, pending
+    # Return only submitted and drafts
+    return submitted, drafts
 
 
 # ================= EXPORT MASTER PDF =================
+def delete_unattached_drafts(user_id, tables):
+    """Deletes any records where master_id is NULL for the given user (un-saved lazy drafts)."""
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        for table in tables:
+            # We only delete if master_id is NULL (unattached)
+            cur.execute(f'DELETE FROM "{table}" WHERE created_by = %s AND master_id IS NULL', (user_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Error deleting unattached drafts: {e}")
+    finally:
+        if 'conn' in locals() and conn:
+            release_connection(conn)
+
+
 def export_master_submission_pdf(master_id):
     conn = None
     cur = None
@@ -667,11 +710,11 @@ def export_master_submission_pdf(master_id):
     try:
         conn = get_connection()
 
-        # 🔥 Fetch master status, rejection reason and username
+        # Fetch master info
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT m.status, m.rejection_reason, m.module, u.username as created_by_user
+            SELECT u.username as created_by_user, m.module, m.estimate_number, m.year_of_estimate
             FROM master_submission m
             JOIN users u ON m.user_id = u.id
             WHERE m.id=%s
@@ -681,10 +724,20 @@ def export_master_submission_pdf(master_id):
 
         master_row = cur.fetchone()
 
-        status = master_row[0] if master_row else ""
-        rejection_reason = master_row[1] if master_row else None
-        module_val = master_row[2] if master_row else ""
-        created_by_user = master_row[3] if master_row else "Unknown"
+        created_by_user = master_row[0] if master_row else "Unknown"
+        module_val = master_row[1] if master_row else ""
+        est_no = master_row[2] if master_row else "---"
+        est_yr = master_row[3] if master_row else "---"
+        
+        # Format the year (est_yr is now a DATE)
+        formatted_yr = "---"
+        if est_yr and est_yr != "---":
+            if isinstance(est_yr, (datetime.date, datetime.datetime)):
+                formatted_yr = est_yr.strftime("%Y")
+            else:
+                formatted_yr = str(est_yr)
+        
+        display_key = f"{est_no} ({formatted_yr})" if est_no != "---" else "---"
 
         tables = get_all_tables(conn)
 
@@ -700,24 +753,22 @@ def export_master_submission_pdf(master_id):
         elements = []
         styles = getSampleStyleSheet()
 
-        # 🔥 Add Application Status at top
+        elements.append(
+            Paragraph(f"<b>Application Record</b>", styles["Title"])
+        )
+        elements.append(Spacer(1, 12))
+        
         elements.append(
             Paragraph(f"<b>Submitted By:</b> {created_by_user}", styles["Heading2"])
         )
         elements.append(
             Paragraph(f"<b>Module:</b> {module_val.replace('_', ' ').title()}", styles["Heading2"])
         )
-        elements.append(
-            Paragraph(f"<b>Application Status:</b> {status}", styles["Heading2"])
-        )
-        elements.append(Spacer(1, 12))
-
-        # 🔥 If Rejected → Show Reason
-        if status == "REJECTED" and rejection_reason:
+        if module_val == "contract_management":
             elements.append(
-                Paragraph(f"<b>Rejection Reason:</b> {rejection_reason}", styles["Normal"])
+                Paragraph(f"<b>Estimate Key:</b> {display_key}", styles["Heading2"])
             )
-            elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 20))
 
         wrap_style = ParagraphStyle(
             name="wrap", parent=styles["Normal"], fontSize=7, leading=9
@@ -858,23 +909,34 @@ def get_table_columns(table, is_admin=False):
             release_connection(conn)
 
 
-def get_user_draft(table, user_id):
+def get_user_draft(table, user_id, master_id=None):
     conn = None
     cur = None
     try:
         conn = get_connection()
         cur = conn.cursor()
 
-        query = sql.SQL("""
-            SELECT * FROM {table}
-            WHERE created_by=%s 
-            AND is_draft=TRUE
-            AND master_id IS NULL
-            ORDER BY id DESC
-            LIMIT 1
-        """).format(table=sql.Identifier(table))
-
-        cur.execute(query, (user_id,))
+        if master_id:
+            query = sql.SQL("""
+                SELECT * FROM {table}
+                WHERE created_by=%s 
+                AND master_id=%s
+                AND is_draft=TRUE
+                ORDER BY id DESC
+                LIMIT 1
+            """).format(table=sql.Identifier(table))
+            cur.execute(query, (user_id, master_id))
+        else:
+            query = sql.SQL("""
+                SELECT * FROM {table}
+                WHERE created_by=%s 
+                AND is_draft=TRUE
+                AND master_id IS NULL
+                ORDER BY id DESC
+                LIMIT 1
+            """).format(table=sql.Identifier(table))
+            cur.execute(query, (user_id,))
+            
         row = cur.fetchone()
 
         if not row:
@@ -898,7 +960,7 @@ def get_user_draft(table, user_id):
 def can_user_edit(master_id):
     status = get_master_status(master_id)
 
-    if status in ["DRAFT", "REJECTED"]:
+    if status == "DRAFT":
         return True
 
     return False
@@ -908,7 +970,8 @@ def can_user_edit(master_id):
 # ================= RESTORE DRAFT =================
 
 
-def get_master_status(user_id, module_name):
+def get_master_status(master_id):
+    master_id = int(master_id)
     conn = None
     cur = None
     try:
@@ -918,13 +981,10 @@ def get_master_status(user_id, module_name):
         query = """
             SELECT status
             FROM master_submission
-            WHERE user_id = %s
-            AND module = %s
-            ORDER BY created_at DESC
-            LIMIT 1
+            WHERE id = %s
         """
 
-        cur.execute(query, (user_id, module_name))
+        cur.execute(query, (master_id,))
         result = cur.fetchone()
 
         if result:
