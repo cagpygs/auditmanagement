@@ -219,7 +219,19 @@ def save_draft_record(table, data, user_id, master_id=None):
 # ================= CREATE MASTER SUBMISSION =================
 def create_master_submission(user_id, module, tables, status='COMPLETED', estimate_number=None, year_of_estimate=None):
     user_id = int(user_id)
+    
+    # Hard uniqueness check for (estimate_number, year_of_estimate) - ONLY for contract management
+    if module == "contract_management" and estimate_number and year_of_estimate:
+
+        # Check if already exists in master_submission (within this module)
+        existing = get_submissions_by_estimate(estimate_number, year_of_estimate, module=module)
+
+        if existing:
+            yr_str = year_of_estimate.strftime("%Y") if hasattr(year_of_estimate, 'strftime') else str(year_of_estimate)
+            raise ValueError(f"An application with Estimate Number '{estimate_number}' and Year '{yr_str}' already exists.")
+
     cycle = get_next_cycle(user_id, module)
+
 
     conn = None
     cur = None
@@ -361,9 +373,10 @@ def get_user_master_submissions_admin(user_id):
             release_connection(conn)
 
 
-def get_submissions_by_estimate(est_no, est_yr, user_id=None):
+def get_submissions_by_estimate(est_no, est_yr, user_id=None, module=None):
     """
     Fetches all master_submission records matching a specific estimate number and year.
+    If module is provided, filters for that specific module.
     If user_id is provided, filters for that user.
     """
     conn = None
@@ -371,6 +384,10 @@ def get_submissions_by_estimate(est_no, est_yr, user_id=None):
     try:
         conn = get_connection()
         cur = conn.cursor()
+
+        # Basic validation to avoid SQL errors for placeholders like '---' or empty values
+        if not est_no or str(est_no).strip() == "---" or not est_yr or str(est_yr).strip() == "---":
+            return []
 
         query = """
             SELECT m.*, u.username as created_by_user
@@ -384,6 +401,10 @@ def get_submissions_by_estimate(est_no, est_yr, user_id=None):
         if user_id:
             query += " AND m.user_id = %s"
             params.append(user_id)
+        
+        if module:
+            query += " AND m.module = %s"
+            params.append(module)
 
         query += " ORDER BY m.created_at DESC"
 
@@ -393,8 +414,10 @@ def get_submissions_by_estimate(est_no, est_yr, user_id=None):
         records = [dict(zip(columns, row)) for row in cur.fetchall()]
         return records
     except Exception as e:
-        st.error(f"Error getting submissions by estimate: {e}")
+        # Avoid showing internal SQL error if we missed a placeholder case, but report generally
+        st.error(f"Error fetching applications for this estimate ({module or 'global'}): {e}")
         return []
+
     finally:
         if cur:
             cur.close()

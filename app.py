@@ -12,12 +12,13 @@ import streamlit.components.v1 as components
 
 
 # Load CAG logo as base64 for HTML embedding
-_logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+_base_dir = os.path.dirname(os.path.abspath(__file__))
+_logo_path = os.path.join(_base_dir, "logo.png")
 if os.path.exists(_logo_path):
     with open(_logo_path, "rb") as _f:
         _logo_b64 = base64.b64encode(_f.read()).decode()
-    LOGO_IMG = f'<img src="data:image/png;base64,{_logo_b64}" style="width:200px;height:200px;object-fit:contain;">'
-    LOGO_SMALL = f'<img src="data:image/png;base64,{_logo_b64}" style="width:150px;height:150px;object-fit:contain;vertical-align:middle;">'
+    LOGO_IMG = f'<img src="data:image/png;base64,{_logo_b64}" style="width:120px;height:120px;object-fit:contain;">'
+    LOGO_SMALL = f'<img src="data:image/png;base64,{_logo_b64}" style="width:50px;height:50px;object-fit:contain;vertical-align:middle;">'
 else:
     LOGO_IMG = "🏛️"
     LOGO_SMALL = "🏛️"
@@ -52,470 +53,32 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ========== MASTER CSS ==========
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+# ========== STYLE LOADING ==========
+def load_css(file_name):
+    if os.path.exists(file_name):
+        with open(file_name, encoding='utf-8') as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-    font-size: 15px;
-}
+load_css('style.css')
 
-/* ---- Background ---- */
-.stApp {
-    background-color: #f8fafc;
-    background-image: radial-gradient(circle at 50% 0%, #e0e7ff 0%, transparent 40%),
-                      radial-gradient(circle at 100% 100%, #dbeafe 0%, transparent 40%);
-    background-attachment: fixed;
-}
 
-.block-container {
-    padding-top: 1.5rem;
-    padding-bottom: 3rem;
-    max-width: 1200px;
-}
-
-/* ---- Top Header Bar ---- */
-.top-header {
-    background: transparent;
-    color: #1e293b;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-.top-header h1 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 700;
-    color: #1e293b;
-    letter-spacing: -0.3px;
-}
-.top-header .subtitle {
-    font-size: 13px;
-    opacity: 0.75;
-    margin-top: 2px;
-}
-.user-pill {
-    background: rgba(255,255,255,0.15);
-    border-radius: 30px;
-    padding: 6px 16px;
-    font-size: 14px;
-    font-weight: 600;
-    display: inline-block;
-}
-
-/* ---- Login Page ---- */
-.login-container {
-    max-width: 420px;
-    margin: 60px auto 0 auto;
-    text-align: center;
-}
-.login-logo {
-    font-size: 64px;
-    margin-bottom: 8px;
-}
-.login-title {
-    font-size: 28px;
-    font-weight: 800;
-    color: #1e3a5f;
-    margin-bottom: 4px;
-}
-.login-subtitle {
-    font-size: 15px;
-    color: #64748b;
-    margin-bottom: 32px;
-}
-.login-card {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    padding: 36px 32px;
-    border-radius: 20px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    text-align: left;
-}
-
-/* ---- Cards ---- */
-.card {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 24px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    margin-bottom: 20px;
-}
-
-/* ---- Status Metric Cards ---- */
-.metric-card {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 16px;
-    padding: 20px 16px;
-    text-align: center;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    border-top: 4px solid #e2e8f0;
-}
-.metric-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-}
-.metric-card .metric-number {
-    font-size: 36px;
-    font-weight: 800;
-    line-height: 1.1;
-}
-.metric-card .metric-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #64748b;
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-.metric-card.total  { border-top-color: #3b82f6; }
-.metric-card.pending  { border-top-color: #10b981; }
-.metric-card.total   .metric-number { color: #3b82f6; }
-.metric-card.pending  .metric-number { color: #10b981; }
-.metric-card.active {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-}
-
-/* ---- Progress Bar ---- */
-.progress-wrapper {
-    background: white;
-    border-radius: 16px;
-    padding: 20px 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-}
-
-/* ---- Activity Table Styling ---- */
-.activity-header {
-    background: transparent;
-    padding: 10px 16px;
-    margin-bottom: 8px;
-    border-bottom: 2px solid #f1f5f9;
-}
-.activity-header span {
-    font-size: 11px;
-    text-transform: uppercase;
-    font-weight: 700;
-    color: #94a3b8;
-    letter-spacing: 0.5px;
-}
-.activity-card {
-    background: white;
-    padding: 10px 10px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-    border: 1px solid #f1f5f9;
-    margin-bottom: 10px;
-    transition: all 0.2s ease;
-}
-.activity-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0,0,0,0.06);
-    border-color: #e2e8f0;
-}
-.activity-badge {
-    padding: 4px 12px;
-    border-radius: 30px;
-    font-size: 12px;
-    font-weight: 700;
-    display: inline-block;
-}
-.badge-total-count { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-.badge-draft-count { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
-.badge-comp-count  { background: #ecfdf5; color: #059669; border: 1px solid #d1fae5; }
-.progress-label {
-    font-size: 14px;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 8px;
-}
-.progress-pct {
-    font-size: 28px;
-    font-weight: 800;
-    color: #1e3a5f;
-    margin-bottom: 8px;
-}
-.custom-progress {
-    background: #e2e8f0;
-    border-radius: 10px;
-    height: 14px;
-    width: 100%;
-}
-.custom-progress-fill {
-    height: 100%;
-    border-radius: 10px;
-    text-align: right;
-    padding-right: 8px;
-    font-size: 10px;
-    font-weight: 700;
-    color: white;
-    line-height: 14px;
-    transition: width 0.5s ease;
-}
-
-/* ---- Submission Cards ---- */
-.submission-card {
-    background: white;
-    padding: 18px 20px;
-    border-radius: 14px;
-    margin-bottom: 12px;
-    border-left: 6px solid #e2e8f0;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-}
-.submission-card.submitted { border-left-color: #10b981; }
-.submission-card.pending  { border-left-color: #f59e0b; }
-
-/* ---- Status Badge ---- */
-.badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.4px;
-}
-.badge-submitted { background: #ecfdf5; color: #065f46; }
-.badge-draft     { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
-
-/* ---- Timeline ---- */
-.timeline-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 16px;
-}
-.timeline-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-    font-size: 14px;
-}
-.timeline-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-/* ---- Submit CTA ---- */
-.submit-cta {
-    background: linear-gradient(135deg, #1e3a5f, #2563eb);
-    color: white;
-    padding: 28px 32px;
-    border-radius: 18px;
-    text-align: center;
-    margin-top: 24px;
-    box-shadow: 0 6px 24px rgba(37,99,235,0.25);
-}
-.submit-cta h3 {
-    color: white;
-    font-size: 20px;
-    margin-bottom: 8px;
-    font-weight: 700;
-}
-.submit-cta p {
-    opacity: 0.82;
-    font-size: 14px;
-    margin-bottom: 0;
-}
-
-/* ---- Section helper ---- */
-.section-helper {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 10px;
-    padding: 12px 16px;
-    font-size: 13px;
-    color: #1e40af;
-    margin-bottom: 16px;
-}
-
-/* ---- Admin Panel ---- */
-.admin-banner {
-    background: linear-gradient(135deg, #0f172a, #1e3a5f);
-    color: white;
-    padding: 20px 28px;
-    border-radius: 16px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-}
-.admin-banner h2 { color: white; font-size: 20px; margin: 0 0 4px 0; font-weight: 700; }
-.admin-banner p  { color: rgba(255,255,255,0.65); font-size: 13px; margin: 0; }
-
-/* ---- Buttons ---- */
-.stButton > button {
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 14px;
-    height: 44px;
-    border: none;
-    font-family: 'Inter', sans-serif;
-    transition: all 0.2s ease;
-}
-.stButton > button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-}
-
-/* ---- Tabs ---- */
-button[data-baseweb="tab"] {
-    font-size: 14px;
-    font-weight: 600;
-    padding: 10px 18px;
-    font-family: 'Inter', sans-serif;
-}
-button[data-baseweb="tab"][aria-selected="true"] {
-    color: #2563eb;
-    border-bottom: 3px solid #2563eb;
-}
-
-/* ---- Sidebar ---- */
-[data-testid="stSidebar"] {
-    background: white !important;
-}
-.sidebar-section-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #94a3b8;
-    margin: 16px 0 8px 0;
-}
-.sidebar-info-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 14px 16px;
-    font-size: 13px;
-    line-height: 1.8;
-    color: #334155;
-}
-.sidebar-tip {
-    background: #eff6ff;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 12px;
-    color: #1d4ed8;
-    margin-top: 12px;
-    line-height: 1.5;
-}
-
-/* ---- Expander ---- */
-.streamlit-expanderHeader {
-    font-size: 15px;
-    font-weight: 600;
-}
-
-/* ---- Inputs ---- */
-.stTextInput input, .stNumberInput input, .stSelectbox [data-baseweb="select"] {
-    border-radius: 8px;
-    font-size: 14px;
-    transition: all 0.2s ease;
-}
-.stTextInput input:focus, .stNumberInput input:focus, .stSelectbox [data-baseweb="select"]:focus-within {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
-}
-
-/* ---- Approve / Reject ---- */
-.approve-btn > button {
-    background: #10b981 !important;
-    color: white !important;
-}
-.reject-btn > button {
-    background: #ef4444 !important;
-    color: white !important;
-}
-
-/* ---- Empty state ---- */
-.empty-state {
-    text-align: center;
-    padding: 48px 24px;
-    color: #94a3b8;
-}
-.empty-state .empty-icon { font-size: 52px; margin-bottom: 12px; }
-.empty-state p { font-size: 16px; font-weight: 500; }
-.empty-state small { font-size: 13px; }
-
-/* ---- Hero Banner ---- */
-.hero-banner {
-    background: linear-gradient(135deg, #1e293b, #0f172a);
-    color: white;
-    padding: 2.5rem 2rem;
-    border-radius: 16px;
-    margin-bottom: 2rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-.hero-banner h1 { color: white !important; margin: 0 0 0.5rem 0; font-size: 28px; }
-.hero-banner p { color: #94a3b8; margin: 0; font-size: 16px; }
-
-/* ---- Module Selection Cards ---- */
-.module-card {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 20px;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    text-decoration: none;
-    color: #1e293b;
-}
-.module-card:hover {
-    border-color: #3b82f6;
-    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.1);
-    transform: translateY(-2px);
-}
-.module-card .icon { font-size: 32px; margin-bottom: 12px; }
-.module-card .title { font-weight: 600; font-size: 16px; }
-.module-card .desc { font-size: 12px; color: #64748b; margin-top: 4px; }
-
-/* ---- Section Header ---- */
-.section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin: 1.5rem 0 1rem 0;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #f1f5f9;
-}
-.section-header h3 { margin: 0; font-size: 20px; color: #1e293b; }
-
-/* ---- Completion banner ---- */
-.completion-banner {
-    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-    border: 2px solid #10b981;
-    border-radius: 14px;
-    padding: 20px 24px;
-    text-align: center;
-    margin: 16px 0;
-}
-.completion-banner h3 { color: #065f46; margin: 0 0 4px 0; font-size: 18px; }
-.completion-banner p  { color: #047857; margin: 0; font-size: 14px; }
-</style>
-""", unsafe_allow_html=True)
+def render_footer():
+    """Renders the common footer."""
+    st.markdown("""
+    <div class="footer-container">
+        <div class="footer-brand">Comptroller and Auditor General of India</div>
+        <div class="footer-subtitle">Irrigation Department - Canal Audit & Management System</div>
+        <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Technical Support</a>
+            <a href="#">Contact Us</a>
+        </div>
+        <div class="footer-bottom">
+            © 2024 CAG India. All Rights Reserved. | Developed by DAC-Cell-Latief.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ================= SESSION STATE =================
@@ -595,18 +158,18 @@ def go_home():
 
 if not st.session_state.logged_in or not st.session_state.user_id:
 
-    st.markdown(f"""
-    <div class="login-container">
-        <div class="login-logo">{LOGO_IMG}</div>
-        <div class="login-title">Login</div>
-        <div class="login-subtitle">Comptroller &amp; Auditor General of India</div>
-    </div>
-    """, unsafe_allow_html=True)
-
     # Center the form using columns
     _, col, _ = st.columns([1, 1.4, 1])
 
     with col:
+        st.markdown(f"""
+        <div class="login-container">
+            <div class="login-logo">{LOGO_IMG}</div>
+            <div class="login-title">Audit Management System</div>
+            <div class="login-subtitle">Comptroller &amp; Auditor General of India</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         with st.container():
            
             st.markdown("#### 🔐 Sign In")
@@ -664,56 +227,48 @@ is_admin = st.session_state.role == "admin"
 role_label = "Administrator" if is_admin else "Field Officer"
 
 # ================= TOP NAVIGATION BAR =================
-# Use more columns for a linear layout
-c_logo, c_title, c_home, c_logout, c_info = st.columns([0.8, 3.2, 1.2, 1.2, 3.6])
+# We use a placeholder for the background styling and a container for the items
+st.markdown('<div id="sticky-header"></div>', unsafe_allow_html=True)
 
-with c_logo:
-    st.markdown(f'<div style="margin-top:10px;">{LOGO_SMALL}</div>', unsafe_allow_html=True)
+# Container for the premium header
+st.markdown(f'<div id="sticky-header-container"><div class="nav-brand">{LOGO_SMALL if "LOGO_SMALL" in locals() else "🏛️"}<h2>Audit Management</h2>{"" if is_admin else f"""<div class="nav-links"><a href="./?nav=Main" target="_self" class="nav-item">Dashboard</a><a href="./?nav=NewApp" target="_self" class="nav-item">Start New Application</a></div>"""}</div><div class="nav-right"><a href="./?nav=Logout" target="_self" class="nav-item" style="color:#ef4444; margin-right:15px; background:rgba(239,68,68,0.1);">🚪 Logout</a><div class="user-profile"><div class="avatar">{st.session_state.username[0].upper() if st.session_state.get("username") else "U"}</div><div class="user-info"><div class="user-name">{st.session_state.get("username", "User")}</div><div class="user-role">{st.session_state.role.replace("_", " ").title() if st.session_state.get("role") else "Member"}</div></div></div></div></div>', unsafe_allow_html=True)
 
-with c_title:
-    st.markdown("""
-    <div style="margin-top:12px;">
-        <h2 style="margin:0; font-size:22px; color:#1e293b;">Audit Management System</h2>
-        <div style="font-size:12px; color:#64748b;">Application Management Portal</div>
-    </div>
-    """, unsafe_allow_html=True)
 
-with c_home:
-    st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
-    if st.button("🏠 Main Page", key="top_home_linear", use_container_width=True):
-        st.session_state.current_view = "Main"
-        if is_admin:
-            st.session_state.status_filter = "ALL"
-            if "selected_user" in st.session_state:
-                del st.session_state["selected_user"]
-        st.rerun()
 
-with c_logout:
-    st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
-    if st.button("🚪 Logout", key="top_logout_linear", use_container_width=True):
-        cookies["logged_in"] = "0"
-        cookies["user_id"] = ""
-        cookies["username"] = ""
-        cookies["role"] = ""
-        cookies["allowed_modules"] = ""
-        cookies.save()
-        st.session_state.logged_in = False
-        st.session_state.user_id = None
-        st.rerun()
 
-with c_info:
-    current_date = datetime.datetime.now().strftime("%d %b %Y")
-    st.markdown(f"""
-    <div style="text-align:right; margin-top:20px; border-left: 2px solid #e2e8f0; padding-left:15px;">
-        <div style="font-size:14px; font-weight:600; color:#1e293b;">👤 {st.session_state.username}</div>
-        <div style="font-size:11px; color:#64748b;">🎖️ {role_label} &nbsp;|&nbsp; 📅 {current_date}</div>
-    </div>
-    """, unsafe_allow_html=True)
+def clear_module_state(m_key=None):
+    """Clears stale session state flags and draft metadata to ensure a fresh form start."""
+    # 1. Clear ALL section initialization flags and display buffers
+    for key in list(st.session_state.keys()):
+        if "_initialized" in key or "display_" in key:
+            del st.session_state[key]
+            
+    # 2. Clear the specific initial preliminary values
+    if "initial_estimate_number" in st.session_state:
+        del st.session_state["initial_estimate_number"]
+    if "initial_year_of_estimate" in st.session_state:
+        del st.session_state["initial_year_of_estimate"]
+    
+    # 3. If a module key is provided, also delete unattached DB drafts and clear its specific table entries
+    if m_key:
+        m_tables = all_modules.get(m_key, [])
+        user_id = st.session_state.get("user_id")
+        delete_unattached_drafts(user_id, m_tables)
+        # Clear specific table data to avoid ghost inputs
+        for table in m_tables:
+            for key in list(st.session_state.keys()):
+                if key.startswith(f"{table}_"):
+                    del st.session_state[key]
+
 
 
 # =====================================================
 # ================= HELPER FUNCTIONS =================
 # =====================================================
+
+
+
+
 
 def fmt_dt(value):
     """Format a datetime or string timestamp into 12-hour AM/PM display."""
@@ -759,7 +314,8 @@ def show_submission_details(sub, mode="user"):
     if module_key == "contract_management":
         est_no = sub.get("estimate_number") or "---"
         est_yr = sub.get("year_of_estimate") or "---"
-        display_key = f"{est_no} ({fmt_dt(est_yr)})" if est_no != "---" else "---"
+        y_val = est_yr.year if hasattr(est_yr, 'year') else est_yr
+        display_key = f"{est_no} ({y_val})" if est_no != "---" else "---"
         est_html = f'<div style="font-size:13px; font-weight:600; color:#334155; margin-bottom:6px;">🔹 Estimate Key: {display_key}</div>'
     else:
         est_html = ""
@@ -824,11 +380,13 @@ def show_submission_details(sub, mode="user"):
         st.rerun()
 
 @st.dialog("📂 Applications for Estimate", width="large", dismissible=False)
-def show_estimate_group_dialog(est_no, est_yr, user_id=None):
+def show_estimate_group_dialog(est_no, est_yr, user_id=None, module=None):
+
     """
     Shows all master_submission records for a specific estimate number and year.
     """
-    st.markdown(f"#### 📜 Grouped by Estimate: **{est_no}** ({fmt_dt(est_yr)})")
+    y_val = est_yr.year if hasattr(est_yr, 'year') else est_yr
+    st.markdown(f"#### 📜 Grouped by Estimate: **{est_no}** ({y_val})")
     
     is_admin_user = st.session_state.get("role") == "admin"
 
@@ -845,53 +403,59 @@ def show_estimate_group_dialog(est_no, est_yr, user_id=None):
     
     st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
     
-    submissions = get_submissions_by_estimate(est_no, est_yr, user_id=user_id)
+    submissions = get_submissions_by_estimate(est_no, est_yr, user_id=user_id, module=module)
+
     
     if not submissions:
         st.info("No applications found for this estimate.")
-        return
+    
+    else:
+        # Header for the applications list
+        h1, h2, h3, h4, r_spacer, h6 = st.columns([0.8, 1.8, 1.2, 1.2, 1.0, 1.2])
+        h1.markdown("**S.No**")
+        h2.markdown("**User**")
+        h3.markdown("**Date**")
+        h4.markdown("**Status**")
+        h6.markdown("**Action**")
+        st.markdown("<hr style='margin:0; margin-bottom:10px;'>", unsafe_allow_html=True)
 
-    # Header for the applications list
-    h1, h2, h3, h4, r_spacer, h6 = st.columns([0.8, 1.8, 1.2, 1.2, 1.0, 1.2])
-    h1.markdown("**S.No**")
-    h2.markdown("**User**")
-    h3.markdown("**Date**")
-    h4.markdown("**Status**")
-    h6.markdown("**Action**")
-    st.markdown("<hr style='margin:0; margin-bottom:10px;'>", unsafe_allow_html=True)
-
-    for i, s in enumerate(submissions, 1):
-        r1, r2, r3, r4, r_spacer2, r6 = st.columns([0.8, 1.8, 1.2, 1.2, 1.0, 1.2])
-        status = s.get("status", "DRAFT")
-        status_color = "#3b82f6" if status == "DRAFT" else "#10b981"
-        
-        with r1:
-            st.write(f"**{i}**")
-        with r2:
-            st.write(s.get("created_by_user", "Unknown"))
-        with r3:
-            st.write(fmt_dt(s.get("created_at")))
-        with r4:
-            st.markdown(f'<span style="background:{status_color}22; color:{status_color}; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600;">{status}</span>', unsafe_allow_html=True)
+        for i, s in enumerate(submissions, 1):
+            r1, r2, r3, r4, r_spacer2, r6 = st.columns([0.8, 1.8, 1.2, 1.2, 1.0, 1.2])
+            status = s.get("status", "DRAFT")
+            status_color = "#3b82f6" if status == "DRAFT" else "#10b981"
             
-        with r6:
-            if status == "DRAFT" and not is_admin_user:
-                if st.button("📝 Resume", key=f"btn_group_res_{s['id']}", use_container_width=True):
-                    st.session_state.master_id = s["id"]
-                    st.session_state.current_view = s.get("module")
-                    st.rerun()
-            else:
-                # View button for completed or drafts (if admin)
-                if st.button("🔍 View", key=f"btn_group_view_{s['id']}", use_container_width=True):
-                    st.session_state.sub_to_view = s
-                    st.session_state.sub_view_mode = "admin" if is_admin_user else "user"
-                    st.rerun()
+            with r1:
+                st.write(f"**{i}**")
+            with r2:
+                st.write(s.get("created_by_user", "Unknown"))
+            with r3:
+                st.write(fmt_dt(s.get("created_at")))
+            with r4:
+                st.markdown(f'<span style="background:{status_color}22; color:{status_color}; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600;">{status}</span>', unsafe_allow_html=True)
+                
+            with r6:
+                if status == "DRAFT" and not is_admin_user:
+                    if st.button("📝 Resume", key=f"btn_group_res_{s['id']}", use_container_width=True):
+                        clear_module_state(s.get("module"))
+                        st.session_state.master_id = s["id"]
+                        st.session_state.current_view = s.get("module")
+                        st.rerun()
+
+                else:
+                    # View button for completed or drafts (if admin)
+                    if st.button("🔍 View", key=f"btn_group_view_{s['id']}", use_container_width=True):
+                        clear_module_state(s.get("module"))
+                        st.session_state.sub_to_view = s
+                        st.session_state.sub_view_mode = "admin" if is_admin_user else "user"
+                        st.rerun()
+
+
 
     st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
     if st.button("✖️ Close", key=f"close_est_group_{est_no}", use_container_width=True):
         st.rerun()
 
-@st.dialog("📋 Application Already Exists", width="medium")
+@st.dialog("📋 Application Already Exists", width="medium", dismissible=False)
 def show_duplicate_submission_modal():
     """Shows a modal when a user tries to start an estimate that already has a submission."""
     data = st.session_state.get("active_modal_data")
@@ -909,7 +473,7 @@ def show_duplicate_submission_modal():
     st.markdown(f"An application for **{est_no}** ({yr_val}) already exists.")
     
     if status == "DRAFT":
-        st.warning("⚠️ **Existing Draft Found**\nYou already have an unfinished draft for this estimate. Please resume it from the dashboard below.")
+        st.warning("⚠️ **Existing Application with same Estimate Number and Year Found**")
     else:
         st.error("🚫 **Submission Already Completed**\nThis estimate has already been submitted and cannot be modified or duplicated.")
         if st.button("🔍 View Submission Details", type="primary", use_container_width=True):
@@ -923,6 +487,70 @@ def show_duplicate_submission_modal():
     if st.button("✖️ Close", use_container_width=True):
         del st.session_state["active_modal_data"]
         st.rerun()
+
+@st.dialog("🚀 Start New Application", width="medium", dismissible=False)
+def show_new_application_dialog():
+    """Shows a modal to start a new application from the header."""
+    st.markdown("Select a module below to start a new application.")
+    
+    # Use a unique key for modal selection to avoid conflicts with dashboard
+    selected_m = st.selectbox(
+        "Select Module", 
+        options=list(module_display_map.keys()), 
+        format_func=lambda x: module_display_map[x],
+        key="header_modal_sel_key"
+    )
+    
+    # Show estimate inputs if Contract Management is selected
+    if selected_m == "contract_management":
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        ce1, ce2 = st.columns(2)
+        with ce1:
+            st.text_input("Estimate Number", placeholder="Enter Estimate Number", key="header_modal_est_no")
+        with ce2:
+            current_year = datetime.datetime.now().year
+            year_options = list(range(current_year, 1999, -1))
+            st.selectbox("Year of Estimate", options=year_options, key="header_modal_est_yr")
+
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+    
+    if st.button("Start Application →", use_container_width=True, type="primary"):
+        # Logic to handle starting the application
+        if selected_m == "contract_management":
+             est_no = st.session_state.get("header_modal_est_no", "").strip()
+             est_yr = st.session_state.get("header_modal_est_yr")
+             if not est_no or not est_yr:
+                 st.error("⚠️ Please enter Estimate Number and Year.")
+                 return
+             
+             # Check for existing drafts
+             est_yr_date = datetime.date(est_yr, 1, 1) if isinstance(est_yr, int) else est_yr
+             existing_ones = get_submissions_by_estimate(est_no, est_yr_date, module=selected_m)
+
+             if existing_ones:
+                 st.session_state.active_modal_data = {
+                     "module": selected_m,
+                     "est_no": est_no,
+                     "est_yr": est_yr,
+                     "sub": existing_ones[0]
+                 }
+                 st.rerun()
+
+        # If starting fresh, clear stale state first to reset initialization flags
+        clear_module_state(selected_m)
+        
+        # Then set the NEW initial values
+        if selected_m == "contract_management":
+             st.session_state.initial_estimate_number = est_no
+             st.session_state.initial_year_of_estimate = est_yr
+        
+        st.session_state.master_id = None
+        st.session_state.current_view = selected_m
+        st.rerun()
+
+    if st.button("✖️ Close", use_container_width=True):
+        st.rerun()
+
 
 def is_section_complete(user_id, table, master_id=None):
     percentage, completed, total = get_user_progress(user_id, [table], master_id=master_id)
@@ -1004,11 +632,11 @@ def render_metric_cards(total, submitted, drafts, current_filter, card_type="use
 
     with cols[0]:
         st.markdown(f"""
-        <div class="metric-card" style="background: white; border: 1px solid #e2e8f0; {'border: 2px solid #3b82f6;' if current_filter == 'ALL' else ''}">
-            <div class="metric-number" style="color: #475569;">{total}</div>
-            <div class="metric-label">📋 Total Applications</div>
+        <div class="metric-card total {'active' if current_filter == 'ALL' else ''}">
+            <div class="metric-number">{total}</div>
+            <div class="metric-label">Total Applications</div>
         </div>""", unsafe_allow_html=True)
-        if st.button("Select All", key=f"{prefix}btn_all", use_container_width=True):
+        if st.button("All", key=f"{prefix}btn_all", use_container_width=True):
             if card_type == "user":
                 st.session_state.user_status_filter = "ALL"
                 st.session_state.dashboard_page = 1
@@ -1021,9 +649,9 @@ def render_metric_cards(total, submitted, drafts, current_filter, card_type="use
         st.markdown(f"""
         <div class="metric-card pending {'active' if current_filter == 'COMPLETED' else ''}">
             <div class="metric-number">{submitted}</div>
-            <div class="metric-label">✅ Completed</div>
+            <div class="metric-label">Completed Audits</div>
         </div>""", unsafe_allow_html=True)
-        if st.button("Select Completed", key=f"{prefix}btn_submitted", use_container_width=True):
+        if st.button("Completed", key=f"{prefix}btn_submitted", use_container_width=True):
             if card_type == "user":
                 st.session_state.user_status_filter = "COMPLETED"
                 st.session_state.dashboard_page = 1
@@ -1034,11 +662,11 @@ def render_metric_cards(total, submitted, drafts, current_filter, card_type="use
 
     with cols[2]:
         st.markdown(f"""
-        <div class="metric-card" style="background: white; border: 1px solid #e2e8f0; {'border: 2px solid #3b82f6;' if current_filter == 'DRAFT' else ''}">
-            <div class="metric-number" style="color: #64748b;">{drafts}</div>
-            <div class="metric-label">📝 Drafted Applications</div>
+        <div class="metric-card draft {'active' if current_filter == 'DRAFT' else ''}">
+            <div class="metric-number">{drafts}</div>
+            <div class="metric-label">Draft Applications</div>
         </div>""", unsafe_allow_html=True)
-        if st.button("Select Drafts", key=f"{prefix}btn_drafts", use_container_width=True):
+        if st.button("Drafts", key=f"{prefix}btn_drafts", use_container_width=True):
             if card_type == "user":
                 st.session_state.user_status_filter = "DRAFT"
                 st.session_state.dashboard_page = 1
@@ -1061,23 +689,47 @@ for table in all_tables:
 
 all_module_display_map = {m: m.replace("_", " ").title() for m in all_modules.keys()}
 
+# --- Global Module & Permissions Config ---
+allowed = st.session_state.get("allowed_modules", "")
+if allowed:
+    allowed_list = allowed.split(",")
+    modules = {k: v for k, v in all_modules.items() if k in allowed_list}
+else:
+    # If no modules assigned, show nothing in sidebar except dashboard
+    modules = {}
+
+module_display_map = {m: m.replace("_", " ").title() for m in modules.keys()}
+
+
+# ================= NAVIGATION HANDLING =================
+# --- Unified Link Handler for HTML elements (Header Links) ---
+if st.query_params.get("nav") == "Main":
+    st.session_state.current_view = "Main"
+    st.query_params.clear()
+    st.rerun()
+elif st.query_params.get("nav") == "Logout":
+    cookies["logged_in"] = "0"
+    cookies.save()
+    st.session_state.logged_in = False
+    st.session_state.user_id = None
+    st.query_params.clear()
+    st.rerun()
+elif st.query_params.get("nav") == "NewApp":
+    st.session_state.show_new_app_modal = True
+    st.query_params.clear()
+    st.rerun()
+
 # =====================================================
 # ================= USER SIDE =========================
 # =====================================================
 
 if not is_admin:
+    # --- TRIGGER NEW APP MODAL ---
+    if st.session_state.get("show_new_app_modal"):
+        del st.session_state["show_new_app_modal"]
+        if 'show_new_application_dialog' in locals() or 'show_new_application_dialog' in globals():
+            show_new_application_dialog()
 
-    # Filter modules based on permissions
-    allowed = st.session_state.get("allowed_modules", "")
-    if allowed:
-        allowed_list = allowed.split(",")
-        modules = {k: v for k, v in all_modules.items() if k in allowed_list}
-    else:
-        # If no modules assigned, show nothing in sidebar except dashboard
-        modules = {}
-
-    module_display_map = {m: m.replace("_", " ").title() for m in modules.keys()}
-    # Navigation handling (Sidebar removed, now just view state)
     if "current_view" not in st.session_state:
         st.session_state.current_view = "Main"
     
@@ -1099,43 +751,52 @@ if not is_admin:
                 del st.session_state[key]
         st.session_state.current_module = selected_module
 
+    # ---------- GLOBAL MODAL TRIGGERS ----------
+    # --- TRIGGER SUBMISSION DETAILS FROM MODAL ---
+    if st.session_state.get("sub_to_view"):
+        sub_to_view = st.session_state.get("sub_to_view")
+        mode = st.session_state.get("sub_view_mode", "user")
+        del st.session_state["sub_to_view"]
+        if "sub_view_mode" in st.session_state:
+            del st.session_state["sub_view_mode"]
+        show_submission_details(sub_to_view, mode=mode)
+
+    # --- MODAL PROMPT TRIGGER ---
+    if st.session_state.get("active_modal_data"):
+        show_duplicate_submission_modal()
+
+    # --- TRIGGER NEW APP FROM MODAL ---
+    if st.session_state.get("trigger_new_app_from_modal"):
+        del st.session_state["trigger_new_app_from_modal"]
+        # Save values before clearing
+        saved_no = st.session_state.get("initial_estimate_number")
+        saved_yr = st.session_state.get("initial_year_of_estimate")
+        clear_module_state("contract_management")
+        # Restore values
+        st.session_state.initial_estimate_number = saved_no
+        st.session_state.initial_year_of_estimate = saved_yr
+
+        st.session_state.master_id = None
+        st.session_state.current_view = "contract_management"
+        st.rerun()
+
     # ---------- MAIN PAGE ----------
+
 
     if selected_module == "Main":
 
-        st.markdown(f"""
-        <div class="hero-banner">
+        st.markdown(f"""<div class="hero-banner">
             <h1>👋 Welcome Back, {st.session_state.username}!</h1>
-            <p>Access your audit modules, track application progress, and manage your submissions from this central portal.</p>
-        </div>
-        """, unsafe_allow_html=True)
+            <p>Access your modules and manage your submissions from this central portal.</p>
+        </div>""", unsafe_allow_html=True)
 
         # Fetch data early for use in forms/logic
         draft_summaries = get_user_draft_summaries(user_id, all_modules)
-        
-        # --- Start New Application Section ---
-        st.markdown('<div class="section-header"><h3>🚀 Start New Application</h3></div>', unsafe_allow_html=True)
+
+        # --- Dashboard Content (Start New Application section removed - now in header) ---
         
         if not modules:
             st.warning("⚠️ **No modules have been assigned to your account yet.** Please contact your administrator to grant access.")
-        else:
-            st.markdown("Select a module below to start a new application.")
-            
-            def clear_module_state(m_key):
-                """Clears unattached drafts from DB and session state for the given module."""
-                m_tables = all_modules.get(m_key, [])
-                delete_unattached_drafts(user_id, m_tables)
-                # Clear all session state keys for these tables
-                for table in m_tables:
-                    for key in list(st.session_state.keys()):
-                        if key.startswith(f"{table}_") or key.startswith(f"display_{table}_"):
-                            del st.session_state[key]
-                
-                # Also clear the initial preliminary values
-                if "initial_estimate_number" in st.session_state:
-                    del st.session_state["initial_estimate_number"]
-                if "initial_year_of_estimate" in st.session_state:
-                    del st.session_state["initial_year_of_estimate"]
 
             def handle_start_click():
                 sel_m_key = st.session_state.get("new_app_sel_key")
@@ -1154,17 +815,19 @@ if not is_admin:
                         
                         # Only block/warn if there is an existing DRAFT for this estimate.
                         # Multiple completed ones are now allowed.
-                        existing_ones = get_submissions_by_estimate(est_no, est_yr)
-                        existing_drafts_est = [s for s in existing_ones if s["status"] == "DRAFT"]
-                        
-                        if existing_drafts_est:
+                        # Convert year integer to date for DB compatibility
+                        est_yr_date = datetime.date(est_yr, 1, 1) if isinstance(est_yr, int) else est_yr
+                        existing_ones = get_submissions_by_estimate(est_no, est_yr_date, module=sel_m_key)
+
+                        if existing_ones:
                             st.session_state.active_modal_data = {
                                 "module": sel_m_key,
                                 "est_no": est_no,
                                 "est_yr": est_yr,
-                                "sub": existing_drafts_est[0]
+                                "sub": existing_ones[0]
                             }
                             return
+
                     
                     elif existing_drafts:
                         # For other modules, show the standard draft prompt (Now as a modal too)
@@ -1199,61 +862,33 @@ if not is_admin:
                 
                 # Show estimate inputs if Contract Management is selected
                 if selected_m == "contract_management":
-                    # Sanitize new_app_est_yr to be a date object
-                    if "new_app_est_yr" in st.session_state and isinstance(st.session_state.new_app_est_yr, str):
+                    # Sanitize new_app_est_yr to be an integer (year)
+                    if "new_app_est_yr" in st.session_state and not isinstance(st.session_state.new_app_est_yr, int):
                         del st.session_state.new_app_est_yr
                     if "new_app_est_yr" not in st.session_state:
-                        st.session_state.new_app_est_yr = datetime.date.today()
+                        st.session_state.new_app_est_yr = datetime.datetime.now().year
 
-                    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
                     ce1, ce2 = st.columns(2)
                     with ce1:
                         st.text_input("Estimate Number", placeholder="Enter Estimate Number", key="new_app_est_no")
                     with ce2:
-                        st.date_input("Year of Estimate", key="new_app_est_yr")
+                        current_year = datetime.datetime.now().year
+                        year_options = list(range(current_year, 1999, -1)) # Show most recent first
+                        st.selectbox("Year of Estimate", options=year_options, key="new_app_est_yr")
 
                 with c_btn:
                     st.button("Start →", key="start_new_app_btn", use_container_width=True, type="primary", on_click=handle_start_click)
 
-            # --- TRIGGER SUBMISSION DETAILS FROM MODAL ---
-            if st.session_state.get("sub_to_view"):
-                sub_to_view = st.session_state.get("sub_to_view")
-                mode = st.session_state.get("sub_view_mode", "user")
-                del st.session_state["sub_to_view"]
-                if "sub_view_mode" in st.session_state:
-                    del st.session_state["sub_view_mode"]
-                show_submission_details(sub_to_view, mode=mode)
-
-            # --- MODAL PROMPT TRIGGER ---
-            if st.session_state.get("active_modal_data"):
-                show_duplicate_submission_modal()
-
-            # --- TRIGGER NEW APP FROM MODAL ---
-            if st.session_state.get("trigger_new_app_from_modal"):
-                del st.session_state["trigger_new_app_from_modal"]
-                # Save values before clearing
-                saved_no = st.session_state.get("initial_estimate_number")
-                saved_yr = st.session_state.get("initial_year_of_estimate")
-                clear_module_state("contract_management")
-                # Restore values
-                st.session_state.initial_estimate_number = saved_no
-                st.session_state.initial_year_of_estimate = saved_yr
-                st.session_state.master_id = None
-                st.session_state.current_view = "contract_management"
-                st.rerun()
-
                 
                 
 
-
-
-        st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="section-header"><h3>📋 Your Activity & Submissions</h3></div>', unsafe_allow_html=True)
 
         if "user_status_filter" not in st.session_state:
             st.session_state.user_status_filter = "ALL"
 
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        # st.markdown("<div style='height:2px'></div>", unsafe_allow_html=True)
 
         raw_submissions = get_user_master_submissions(user_id, module=None)
         
@@ -1285,7 +920,7 @@ if not is_admin:
                 st.session_state.user_status_filter, card_type="user"
             )
 
-        st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
+        # st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
         if submissions or draft_summaries:
             if st.session_state.user_status_filter == "COMPLETED":
@@ -1355,15 +990,18 @@ if not is_admin:
                     with r2:
                         if est_no and est_no != "---":
                             if st.button(f"**{est_no}**", key=f"btn_grp_{i}_{est_no}", use_container_width=True):
-                                show_estimate_group_dialog(est_no, est_yr, user_id=user_id)
+                                show_estimate_group_dialog(est_no, est_yr, user_id=user_id, module=group.get("module"))
+
                         else:
                             # If no estimate, show module name and link to dialog specifically for this item
                             mod_name = module_display_map.get(group.get("module"), "Draft")
                             if st.button(f"**{mod_name} (Draft)**", key=f"btn_grp_{i}_{est_no}", use_container_width=True):
-                                show_estimate_group_dialog(est_no, est_yr, user_id=user_id)
+                                show_estimate_group_dialog(est_no, est_yr, user_id=user_id, module=group.get("module"))
+
                     
                     with r3:
-                        st.write(fmt_dt(est_yr))
+                        y_val = est_yr.year if hasattr(est_yr, 'year') else est_yr
+                        st.write(str(y_val))
                     with r4:
                         st.write(fmt_dt(latest_date))
                     with r5:
@@ -1373,11 +1011,12 @@ if not is_admin:
                         </div>
                         """, unsafe_allow_html=True)
 
-                st.markdown('</div>', unsafe_allow_html=True)
+                # st.markdown('</div>', unsafe_allow_html=True)
                 
                 # Navigation at bottom
                 render_pagination_footer("dashboard_page", total_pages)
 
+        render_footer()
         st.stop()
 
     # ---- Module Form Area ----
@@ -1397,11 +1036,6 @@ if not is_admin:
 
     # ---- Module Header & Breadcrumbs ----
     st.markdown(f"""
-    <div style="margin-bottom:24px; display:flex; align-items:center; gap:8px; font-size:14px; color:#64748b;">
-        <span style="color:#1e293b; font-weight:600;">Main Page</span>
-        <span>/</span>
-        <span style="color:#1e293b; font-weight:600;">{selected_module}</span>
-    </div>
     <div style="margin-bottom:20px;">
         <h2 style="margin:0; color:#1e293b;">{selected_module}</h2>
         <p style="margin:0; color:#64748b; font-size:15px;">Fill in all the sections below to complete your audit application.</p>
@@ -1508,26 +1142,39 @@ if not is_admin:
                             elif isinstance(val, str):
                                 try: val = datetime.date.fromisoformat(val[:10])
                                 except: val = None
+                            
+                            # Extract year if it's for year_of_estimate selectbox
+                            if col == "year_of_estimate" and val:
+                                val = val.year if hasattr(val, 'year') else val
                         else:
                             val = str(val)
+                            # Handle year extraction from string date format (e.g. 2026-01-01) for text fields
+                            if col == "year_of_estimate" and "-" in val:
+                                try: val = val.split("-")[0]
+                                except: pass
                         st.session_state[key] = val
                     else:
+                        # Fallback for new applications (no draft yet)
                         if dtype in ("integer", "bigint", "smallint"):
                             st.session_state.setdefault(key, 0)
                         elif dtype in ("numeric", "double precision", "real"):
                             st.session_state.setdefault(key, 0.0)
                         elif dtype == "date":
-                            # Pre-fill initial estimate year if first tab
-                            if is_master_form and col == "year_of_estimate" and st.session_state.get("initial_year_of_estimate"):
-                                st.session_state.setdefault(key, st.session_state.initial_year_of_estimate)
-                            else:
-                                st.session_state.setdefault(key, None)
+                            st.session_state.setdefault(key, None)
                         else:
-                            # Pre-fill initial estimate number if first tab
-                            if is_master_form and col == "estimate_number" and st.session_state.get("initial_estimate_number"):
-                                st.session_state.setdefault(key, st.session_state.initial_estimate_number)
-                            else:
-                                st.session_state.setdefault(key, "")
+                            st.session_state.setdefault(key, "")
+                        
+                        # High-priority pre-fill for Master Estimate fields (Tab 1 fresh start)
+                        if is_master_form and not draft:
+                            if col == "estimate_number" and st.session_state.get("initial_estimate_number"):
+                                st.session_state[key] = str(st.session_state.initial_estimate_number)
+                            elif col == "year_of_estimate" and st.session_state.get("initial_year_of_estimate"):
+                                val = st.session_state.initial_year_of_estimate
+                                # Convert to string for text fields, keep as int for selectbox/number fields
+                                if dtype in ("integer", "bigint", "smallint", "date"):
+                                    st.session_state[key] = val
+                                else:
+                                    st.session_state[key] = str(val)
 
                 st.session_state[f"{table}_initialized"] = True
 
@@ -1568,7 +1215,12 @@ if not is_admin:
                                 value = st.number_input(label, key=key, disabled=is_disabled)
 
                             elif dtype == "date":
-                                value = st.date_input(label, key=key, disabled=is_disabled)
+                                if col == "year_of_estimate":
+                                    current_year = datetime.datetime.now().year
+                                    year_options = list(range(current_year, 1999, -1))
+                                    value = st.selectbox(label, options=year_options, key=key, disabled=is_disabled)
+                                else:
+                                    value = st.date_input(label, key=key, disabled=is_disabled)
 
                             elif dtype == "boolean" or dtype == "bool":
                                 bool_options = ["", "Yes", "No"]
@@ -1589,6 +1241,9 @@ if not is_admin:
                                 value = st.text_input(label, key=key, disabled=is_disabled)
 
                         form_data[col] = value
+                        # Convert year selectbox integer back to date for DB
+                        if col == "year_of_estimate" and isinstance(value, int):
+                            form_data[col] = datetime.date(value, 1, 1)
                         if col not in ["estimate_number", "year_of_estimate"] and value not in ("", None, 0, 0.0):
                             filled_fields += 1
 
@@ -1626,17 +1281,23 @@ if not is_admin:
 
                     if is_new_app:
                         try:
+                            # Convert year integer to date for DB compatibility
+                            db_est_yr = datetime.date(year_of_estimate, 1, 1) if isinstance(year_of_estimate, int) else year_of_estimate
                             target_master_id = create_master_submission(
                                 user_id, module_name, tables, 
                                 status='DRAFT',
                                 estimate_number=estimate_number,
-                                year_of_estimate=year_of_estimate
+                                year_of_estimate=db_est_yr
                             )
+                        except ValueError as ve:
+                            st.error(f"🚫 **Duplicate Application Found**\n{str(ve)}")
+                            st.stop()
                         except Exception as e:
                             st.error(f"❌ Failed to create application: {e}")
                             st.stop()
                     
                     try:
+
                         save_draft_record(table, form_data, user_id, master_id=target_master_id)
                         st.session_state.master_id = target_master_id
                         st.success("✅ Section saved successfully!")
@@ -1667,8 +1328,23 @@ if not is_admin:
                         if col in ["estimate_number", "year_of_estimate"]:
                             value = estimate_number if col == "estimate_number" else year_of_estimate
                             display_key = f"display_{table}_{col}"
+                            
+                            if value is None:
+                                disp_val = ""
+                            elif col == "year_of_estimate":
+                                # Extract only the year part if it's a date or a long string
+                                if hasattr(value, 'year'):
+                                    disp_val = str(value.year)
+                                elif isinstance(value, str) and "-" in value:
+                                    disp_val = value.split("-")[0]
+                                else:
+                                    disp_val = str(value)
+                            else:
+                                disp_val = str(value)
+
                             # Always overwrite so rerun after first-tab save reflects immediately
-                            st.session_state[display_key] = "" if value is None else str(value)
+                            st.session_state[display_key] = disp_val
+
                             st.text_input(
                                 label,
                                 disabled=True,
@@ -1685,7 +1361,12 @@ if not is_admin:
                             value = st.number_input(label, key=key)
 
                         elif dtype == "date":
-                            value = st.date_input(label, key=key)
+                            if col == "year_of_estimate":
+                                current_year = datetime.datetime.now().year
+                                year_options = list(range(current_year, 1999, -1))
+                                value = st.selectbox(label, options=year_options, key=key)
+                            else:
+                                value = st.date_input(label, key=key)
 
                         elif dtype == "boolean" or dtype == "bool":
                             # Use a selectbox for boolean fields to ensure valid input
@@ -1710,6 +1391,10 @@ if not is_admin:
                             value = st.text_input(label, key=key)
 
                     form_data[col] = value
+                    # Convert year selectbox integer back to date for DB
+                    if col == "year_of_estimate" and isinstance(value, int):
+                        form_data[col] = datetime.date(value, 1, 1)
+
                     # Count filled fields excluding auto-filled estimate fields
                     if col not in ["estimate_number", "year_of_estimate"] and value not in ("", None, 0, 0.0):
                         filled_fields += 1
@@ -1740,11 +1425,13 @@ if not is_admin:
 
                         if is_new_app:
                             try:
+                                # Convert year integer to date for DB compatibility
+                                db_est_yr = datetime.date(year_of_estimate, 1, 1) if isinstance(year_of_estimate, int) else year_of_estimate
                                 target_master_id = create_master_submission(
                                     user_id, module_name, tables, 
                                     status='DRAFT',
                                     estimate_number=estimate_number,
-                                    year_of_estimate=year_of_estimate
+                                    year_of_estimate=db_est_yr
                                 )
                             except Exception as e:
                                 err_str = str(e).lower()
@@ -1816,12 +1503,7 @@ if is_admin:
             del st.session_state["sub_view_mode"]
         show_submission_details(sub_to_view, mode=mode)
 
-    st.markdown(f"""
-    <div class="hero-banner" style="background: linear-gradient(135deg, #4338ca, #312e81);">
-        <h1>🛡️ Admin Review Panel</h1>
-        <p>Review submitted applications from all users, manage field officer accounts, and export official reports.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="hero-banner" style="background: linear-gradient(135deg, #4338ca, #312e81); margin-top: 0px;"><h1>🛡️ Admin Review Panel</h1><p style="margin:0;">Review submitted applications, manage accounts, and export reports.</p></div>""", unsafe_allow_html=True)
 
     tab_review, tab_users, tab_manage_users = st.tabs(["📋 Review Applications", "➕ Create User", "👥 Manage Users"])
 
@@ -2153,3 +1835,5 @@ if is_admin:
                         <small>Try selecting a different filter or applicant.</small>
                     </div>
                     """, unsafe_allow_html=True)
+
+render_footer()
