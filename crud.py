@@ -508,30 +508,23 @@ def get_user_progress(user_id, tables, master_id=None):
         conn = get_connection()
         cur = conn.cursor()
         
-        # Use UNION ALL to check all 100+ tables efficiently
+        # Use UNION ALL to check all labels efficiently
         checks = []
+        if not master_id:
+            return 0, 0, total
+
         for table in tables:
-            if master_id:
-                checks.append(f"""
-                    SELECT '{table}' WHERE EXISTS (
-                        SELECT 1 FROM "{table}" WHERE created_by=%s AND master_id=%s
-                    )
-                """)
-            else:
-                checks.append(f"""
-                    SELECT '{table}' WHERE EXISTS (
-                        SELECT 1 FROM "{table}" WHERE created_by=%s AND master_id IS NULL
-                    )
-                """)
+            checks.append(f"""
+                SELECT '{table}' WHERE EXISTS (
+                    SELECT 1 FROM "{table}" WHERE created_by=%s AND master_id=%s
+                )
+            """)
         
         if checks:
             combined = " UNION ALL ".join(checks)
             params = []
             for _ in tables:
-                if master_id:
-                    params.extend([user_id, master_id])
-                else:
-                    params.append(user_id)
+                params.extend([user_id, master_id])
             
             cur.execute(combined, params)
             rows = cur.fetchall()
@@ -594,21 +587,18 @@ def get_incomplete_forms(user_id, tables, master_id=None):
         cur = conn.cursor()
         
         # Get list of completed tables first
+        if not master_id:
+             return tables # All are incomplete if no master_id
+
         checks = []
         for table in tables:
-            if master_id:
-                checks.append(f"SELECT '{table}' WHERE EXISTS (SELECT 1 FROM \"{table}\" WHERE created_by=%s AND master_id=%s)")
-            else:
-                checks.append(f"SELECT '{table}' WHERE EXISTS (SELECT 1 FROM \"{table}\" WHERE created_by=%s AND is_draft=TRUE)")
+            checks.append(f"SELECT '{table}' WHERE EXISTS (SELECT 1 FROM \"{table}\" WHERE created_by=%s AND master_id=%s)")
         
         if checks:
             combined = " UNION ALL ".join(checks)
             params = []
             for _ in tables:
-                if master_id:
-                    params.extend([user_id, master_id])
-                else:
-                    params.append(user_id)
+                 params.extend([user_id, master_id])
                     
             cur.execute(combined, params)
             completed_tables = [row[0] for row in cur.fetchall()]

@@ -1498,15 +1498,23 @@ if not is_admin:
                             st.stop()
 
     # ---------- FINAL SUBMIT ----------
+    master_id_active = st.session_state.get("master_id")
+    incomplete_sections = []
+    
+    if master_id_active:
+        incomplete_sections = get_incomplete_forms(user_id, tables, master_id=master_id_active)
+    else:
+        # If no master_id, everything is incomplete but we don't show the submit CTA yet
+        incomplete_sections = tables
 
-    incomplete_sections = get_incomplete_forms(user_id, tables, master_id=st.session_state.master_id)
+    if master_id_active:
+        st.markdown("""
+        <div class="submit-cta">
+            <h3>🚀 Ready to Submit Your Application?</h3>
+            <p>Once all sections are complete, click the button below to submit your full application for review.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="submit-cta">
-        <h3>🚀 Ready to Submit Your Application?</h3>
-        <p>Once all sections are complete, click the button below to submit your full application for review.</p>
-    </div>
-    """, unsafe_allow_html=True)
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
