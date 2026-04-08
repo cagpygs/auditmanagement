@@ -1,6 +1,5 @@
 import psycopg2
 import datetime
-from psycopg2 import pool
 import pandas as pd
 import streamlit as st
 from psycopg2 import sql
@@ -687,9 +686,6 @@ def get_incomplete_forms(user_id, tables, master_id=None):
     if not tables:
         return []
 
-    # Calculate incomplete by subtracting completed from total
-    percentage, completed_count, total_count = get_user_progress(user_id, tables, master_id=master_id)
-    
     # Actually, to get EXACT table names that are incomplete, we need the inverse of the UNION ALL
     conn = None
     cur = None
@@ -727,10 +723,8 @@ def get_incomplete_forms(user_id, tables, master_id=None):
             
     return incomplete
 
-    return incomplete
 
-
-def get_user_draft_summaries(user_id, all_modules):
+def get_user_draft_summaries(user_id):
     """
     Fetches all master_submission records for a user that have status='DRAFT'.
     """
@@ -789,7 +783,7 @@ def get_user_master_status_counts(user_id, all_modules=None):
         
         # If all_modules provided, count modules with drafts
         if all_modules:
-            draft_list = get_user_draft_summaries(user_id, all_modules)
+            draft_list = get_user_draft_summaries(user_id)
             drafts = len(draft_list)
 
     except Exception as e:
@@ -1110,63 +1104,6 @@ def get_master_status(master_id):
             cur.close()
         if conn:
             release_connection(conn)
-
-
-
-
-def delete_user_drafts(master_id, tables):
-    conn = None
-    cur = None
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-
-        for table in tables:
-            cur.execute(
-                sql.SQL("DELETE FROM {} WHERE master_id=%s").format(sql.Identifier(table)),
-                (master_id,)
-            )
-
-        conn.commit()
-    except Exception as e:
-        st.error(f"Error deleting user drafts: {e}")
-        if conn:
-            conn.rollback()
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
-
-
-def delete_draft_by_user(user_id, tables):
-    """Delete in-progress drafts (is_draft=TRUE, master_id IS NULL) for a user."""
-    user_id = int(user_id)
-    conn = None
-    cur = None
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-
-        for table in tables:
-            cur.execute(
-                sql.SQL(
-                    "DELETE FROM {} WHERE created_by=%s AND is_draft=TRUE AND master_id IS NULL"
-                ).format(sql.Identifier(table)),
-                (user_id,)
-            )
-
-        conn.commit()
-    except Exception as e:
-        st.error(f"Error deleting drafts by user: {e}")
-        if conn:
-            conn.rollback()
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
-
 def create_user(username, password, role="USER", allowed_modules=""):
     """
     Creates a new user. Returns (True, "Success message") or (False, "Error message").
