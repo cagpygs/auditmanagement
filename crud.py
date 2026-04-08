@@ -2,7 +2,7 @@ import psycopg2
 import datetime
 import pandas as pd
 import streamlit as st
-from psycopg2 import sql
+from psycopg2 import pool, sql
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
@@ -16,7 +16,7 @@ import os
 @st.cache_resource
 def get_db_pool():
     # Using ThreadedConnectionPool for multi-threaded Streamlit application
-    return psycopg2.pool.ThreadedConnectionPool(
+    return pool.ThreadedConnectionPool(
         1, 50,
         host=os.getenv("DB_HOST", "localhost"),
         database=os.getenv("DB_NAME", "Irrigation"),
