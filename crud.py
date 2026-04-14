@@ -423,7 +423,7 @@ def update_master_submission(master_id, estimate_number=None, year_of_estimate=N
             return True
             
         params.append(master_id)
-        query = f"UPDATE master_submission SET {', '.join(updates)}, updated_at = NOW() WHERE id = %s"
+        query = f"UPDATE master_submission SET {', '.join(updates)} WHERE id = %s"
         
         cur.execute(query, params)
         conn.commit()
@@ -924,6 +924,65 @@ def ensure_contract_quality_table_schema():
         if conn:
             conn.rollback()
         return False
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_connection(conn)
+
+
+def get_master_ids_with_table_data(master_ids, tables):
+    """
+    Returns the subset of `master_ids` that have at least one row in any of `tables`.
+    """
+    clean_ids = []
+    for raw_id in master_ids or []:
+        try:
+            if raw_id not in (None, ""):
+                clean_ids.append(int(raw_id))
+        except (TypeError, ValueError):
+            continue
+    if not clean_ids:
+        return set()
+
+    table_list = [ensure_valid_table_name(t) for t in (tables or []) if t]
+    if not table_list:
+        return set()
+
+    conn = None
+    cur = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        union_parts = []
+        params = []
+        for table_name in table_list:
+            union_parts.append(
+                sql.SQL(
+                    """
+                    SELECT DISTINCT master_id
+                    FROM {table}
+                    WHERE master_id = ANY(%s)
+                    """
+                ).format(table=sql.Identifier(table_name))
+            )
+            params.append(clean_ids)
+
+        query = sql.SQL(" UNION ").join(union_parts)
+        cur.execute(query, params)
+        return {
+            int(row[0])
+            for row in cur.fetchall()
+            if row and row[0] not in (None, "")
+        }
+    except Exception as e:
+        report_error(
+            "Error checking contract table data for submissions.",
+            e,
+            "crud.get_master_ids_with_table_data",
+        )
+        return set()
     finally:
         if cur:
             cur.close()

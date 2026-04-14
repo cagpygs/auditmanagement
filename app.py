@@ -11,6 +11,7 @@ from crud import (
     get_full_submission_data,
     get_incomplete_forms,
     get_master_submission,
+    get_master_ids_with_table_data,
     get_submissions_by_estimate,
     get_table_columns,
     get_project_dpr,
@@ -38,13 +39,14 @@ import base64
 import html
 import json
 import os
+import time
 from urllib.parse import quote
 import streamlit as st
 
 from error_utils import log_exception, report_error
 
 st.set_page_config(
-    page_title="CAG Audit Management System",
+    page_title="Irrigation Audit Management System",
     page_icon="A",
     layout="wide",
 )
@@ -146,15 +148,24 @@ load_css('style.css')
 def render_footer():
     st.markdown("""
     <div class="cag-footer">
-        <div>
-            <div class="cag-footer-left-title">Comptroller &amp; Auditor General of India</div>
-            <div class="cag-footer-left-sub">
-                Irrigation Audit Wing &nbsp;-&nbsp; Uttar Pradesh &nbsp;-&nbsp; Secure Government Portal
+        <div class="cag-footer-tricolor"></div>
+        <div class="cag-footer-inner">
+            <div>
+                <div class="cag-footer-left-title">Comptroller &amp; Auditor General of India</div>
+                <div class="cag-footer-left-sub">Irrigation Audit Wing &nbsp;&mdash;&nbsp; Uttar Pradesh &nbsp;&mdash;&nbsp; Secure Government Portal</div>
+                <div class="cag-footer-links">
+                    <a href="https://cag.gov.in" target="_blank" class="cag-footer-link">cag.gov.in</a>
+                    <span style="color:rgba(255,255,255,0.15);">|</span>
+                    <a href="https://india.gov.in" target="_blank" class="cag-footer-link">india.gov.in</a>
+                    <span style="color:rgba(255,255,255,0.15);">|</span>
+                     <a href="#" target="_blank" class="cag-footer-link">Contact Us</a>
+                      <a href="#" target="_blank" class="cag-footer-link">Help &amp; Support</a>
+                </div>
             </div>
-        </div>
-        <div>
-            <div class="cag-footer-right-slogan">SATYAMEVA JAYATE</div>
-            <div class="cag-footer-right-sub">Developed by DAC Cell - Latief</div>
+            <div class="cag-footer-right">
+                <div class="cag-footer-right-sub">Irrigation Dept. &mdash; Govt. of Uttar Pradesh</div>
+                <div class="cag-footer-right-sub" style="margin-top:3px;">Developed by DAC Cell-Latief</div>
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -191,6 +202,8 @@ if "module_return_flow_data" not in st.session_state:
     st.session_state.module_return_flow_data = {}
 if "module_return_flow_history" not in st.session_state:
     st.session_state.module_return_flow_history = []
+if "nav_back_stack" not in st.session_state:
+    st.session_state.nav_back_stack = []
 if "project_dpr_table_ready" not in st.session_state:
     st.session_state.project_dpr_table_ready = ensure_project_dpr_table()
 if "quality_table_schema_ready" not in st.session_state:
@@ -249,14 +262,10 @@ if not st.session_state.logged_in or not st.session_state.user_id:
         st.markdown(f"""
         <div class="login-container">
             <div class="login-logo">{LOGO_IMG}</div>
-            <div style="font-size:11px; font-weight:700; color:#9ca3af; letter-spacing:1.2px;
-                        text-transform:uppercase; margin-bottom:10px;">
-                Government of India
-            </div>
-            <div class="login-title">Audit Management System</div>
+            <div class="login-title">Irrigation Audit Management System</div>
             <div class="login-subtitle">Comptroller &amp; Auditor General of India</div>
-            <div style="width:48px; height:3px; background:linear-gradient(90deg,#FF9933 33%,#fff 33% 66%,#138808 66%);
-                        margin:14px auto 0; border-radius:2px;"></div>
+            <div class="login-subtitle">Irrigation Department, Uttar Pradesh</div>
+            <div class="login-tricolor"></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -332,10 +341,18 @@ active_project_for_link = (active_flow_data.get("project_name") or "").strip()
 if not active_project_for_link:
     active_project_for_link = (st.session_state.get("current_project_name") or "").strip()
 if show_create_estimate_link:
-    create_estimate_href = "./?nav=CreateEstimate"
+    # Only show "Create Estimate" if the current project already has a DPR.
+    has_dpr_for_nav = False
     if active_project_for_link:
-        create_estimate_href += f"&project={quote(active_project_for_link)}"
-    nav_links_html += f'<a href="{create_estimate_href}" target="_self" class="nav-item-minimal">Create Estimate</a>'
+        try:
+            has_dpr_for_nav = bool(get_project_dpr(user_id, active_project_for_link, module="contract_management"))
+        except Exception:
+            has_dpr_for_nav = False
+    if has_dpr_for_nav:
+        create_estimate_href = "./?nav=CreateEstimate"
+        if active_project_for_link:
+            create_estimate_href += f"&project={quote(active_project_for_link)}"
+        nav_links_html += f'<a href="{create_estimate_href}" target="_self" class="nav-item-minimal">Create Estimate</a>'
 
 # =====================================================
 # ================= TOP NAVIGATION BAR ================
@@ -347,29 +364,22 @@ nav_html = f"""
 <div id="sticky-header-container">
     <div class="nav-brand">
         {LOGO_SMALL}
-        <div style="margin-left:2px;">
-            <div style="font-size:15px; font-weight:700; color:#fff; letter-spacing:0.2px;">
-                Audit Management System
-            </div>
+        <div class="nav-brand-text-wrap">
+            <div class="nav-brand-title">Irrigation Audit Management System</div>
             <div class="nav-brand-sub">Comptroller &amp; Auditor General of India</div>
         </div>
     </div>
     <div class="nav-links-left">{nav_links_html}</div>
     <div class="nav-right-actions">
-        <span style="font-size:11px; color:rgba(255,255,255,0.45); letter-spacing:0.3px;">
-            {html.escape(str(role_label))}
-        </span>
-        <a href="./?nav=Logout" target="_self" class="logout-link">Sign Out</a>
+        <span class="nav-role-label">{html.escape(str(role_label))}</span>
         <div class="user-pill">
-            <div class="avatar-mini">
-                {html.escape(str(username_initial))}
-            </div>
-            <div style="font-size:13px; font-weight:600; color:#fff;">
-                {html.escape(str(username_value))}
-            </div>
+            <div class="avatar-mini">{html.escape(str(username_initial))}</div>
+            <div class="user-name-label">{html.escape(str(username_value))}</div>
         </div>
+        <a href="./?nav=Logout" target="_self" class="logout-link">Sign Out</a>
     </div>
 </div>
+<div class="nav-spacer"></div>
 """
 st.markdown(nav_html, unsafe_allow_html=True)
 
@@ -423,7 +433,143 @@ def _safe_key(value):
     return "".join(ch if ch.isalnum() else "_" for ch in str(value))
 
 
+def _to_int_id(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _split_contract_submissions(submissions, module_key="contract_management"):
+    records = list(submissions or [])
+    if not records:
+        return [], []
+
+    module_tables = all_modules.get(module_key, [])
+    if not module_tables:
+        return records, []
+
+    master_ids = []
+    for rec in records:
+        rec_id = _to_int_id(rec.get("id"))
+        if rec_id is not None:
+            master_ids.append(rec_id)
+
+    master_ids_with_data = get_master_ids_with_table_data(master_ids, module_tables)
+
+    real_contracts = []
+    placeholders = []
+    for rec in records:
+        rec_id = _to_int_id(rec.get("id"))
+        status = str(rec.get("status") or "").strip().upper()
+        has_table_data = rec_id in master_ids_with_data if rec_id is not None else False
+        if status == "DRAFT" and not has_table_data:
+            placeholders.append(rec)
+        else:
+            real_contracts.append(rec)
+
+    return real_contracts, placeholders
+
+
+def _current_location_signature():
+    flow_data = st.session_state.get("flow_data", {}) or {}
+    try:
+        flow_data_sig = json.dumps(flow_data, sort_keys=True, default=str)
+    except Exception:
+        flow_data_sig = str(flow_data)
+    return (
+        st.session_state.get("flow_page"),
+        flow_data_sig,
+        st.session_state.get("current_view"),
+        st.session_state.get("master_id"),
+        st.session_state.get("current_project_name"),
+        st.session_state.get("initial_estimate_number"),
+        st.session_state.get("initial_year_of_estimate"),
+        st.session_state.get("initial_name_of_project"),
+    )
+
+
+def _snapshot_navigation_state():
+    return {
+        "flow_page": st.session_state.get("flow_page"),
+        "flow_data": dict(st.session_state.get("flow_data", {}) or {}),
+        "flow_history": list(st.session_state.get("flow_history", []) or []),
+        "current_view": st.session_state.get("current_view"),
+        "master_id": st.session_state.get("master_id"),
+        "current_project_name": st.session_state.get("current_project_name"),
+        "initial_estimate_number": st.session_state.get("initial_estimate_number"),
+        "initial_year_of_estimate": st.session_state.get("initial_year_of_estimate"),
+        "initial_name_of_project": st.session_state.get("initial_name_of_project"),
+        "location_signature": _current_location_signature(),
+    }
+
+
+def _push_navigation_snapshot():
+    stack = st.session_state.setdefault("nav_back_stack", [])
+    snap = _snapshot_navigation_state()
+    current_sig = snap.get("location_signature")
+    if stack and stack[-1].get("location_signature") == current_sig:
+        return
+    stack.append(snap)
+    if len(stack) > 200:
+        st.session_state.nav_back_stack = stack[-200:]
+
+
+def set_flash_message(kind: str, message: str):
+    # Persist a one-time message across reruns/navigation.
+    st.session_state["flash_message"] = {
+        "kind": str(kind or "info").strip().lower(),
+        "message": str(message or "").strip(),
+        "ts": time.time(),
+    }
+
+
+def render_flash_message():
+    flash = st.session_state.pop("flash_message", None)
+    if not isinstance(flash, dict):
+        return
+    msg = str(flash.get("message") or "").strip()
+    if not msg:
+        return
+    kind = str(flash.get("kind") or "info").strip().lower()
+    if kind == "success":
+        st.success(msg)
+    elif kind == "error":
+        st.error(msg)
+    elif kind == "warning":
+        st.warning(msg)
+    else:
+        st.info(msg)
+
+
+def _restore_navigation_snapshot(snapshot):
+    if not isinstance(snapshot, dict):
+        return False
+
+    st.session_state.flow_page = snapshot.get("flow_page")
+    st.session_state.flow_data = dict(snapshot.get("flow_data", {}) or {})
+    st.session_state.flow_history = list(snapshot.get("flow_history", []) or [])
+
+    st.session_state.current_view = snapshot.get("current_view") or "Main"
+    st.session_state.master_id = snapshot.get("master_id")
+
+    if snapshot.get("current_project_name") in (None, ""):
+        st.session_state.pop("current_project_name", None)
+    else:
+        st.session_state.current_project_name = snapshot.get("current_project_name")
+
+    for key in ("initial_estimate_number", "initial_year_of_estimate", "initial_name_of_project"):
+        value = snapshot.get(key)
+        if value in (None, ""):
+            st.session_state.pop(key, None)
+        else:
+            st.session_state[key] = value
+
+    return True
+
+
 def open_flow_page(page_name, data=None, push_history=True):
+    _push_navigation_snapshot()
     current_page = st.session_state.get("flow_page")
     current_data = st.session_state.get("flow_data", {})
     if push_history and current_page:
@@ -438,7 +584,58 @@ def open_flow_page(page_name, data=None, push_history=True):
     st.session_state.flow_data = data or {}
 
 
+def _restore_previous_from_module_context():
+    module_name = st.session_state.get("current_view")
+    if module_name in (None, "Main"):
+        return False
+
+    user_id_local = st.session_state.get("user_id")
+
+    if module_name == "contract_management":
+        est_no = (st.session_state.get("initial_estimate_number") or "").strip()
+        est_yr = normalize_year_option(st.session_state.get("initial_year_of_estimate"))
+        project_name = (st.session_state.get("initial_name_of_project") or "").strip()
+        if not project_name:
+            project_name = (st.session_state.get("current_project_name") or "").strip()
+
+        master_id = st.session_state.get("master_id")
+        if (not est_no or not est_yr or not project_name) and master_id:
+            master_rec = get_master_submission(master_id)
+            if master_rec:
+                if not est_no:
+                    est_no = (master_rec.get("estimate_number") or "").strip()
+                if not est_yr:
+                    est_yr = normalize_year_option(master_rec.get("year_of_estimate"))
+                if not project_name:
+                    project_name = (master_rec.get("name_of_project") or "").strip()
+
+        if est_no and est_yr:
+            open_flow_page(
+                "estimate_group",
+                data={
+                    "est_no": str(est_no).strip(),
+                    "est_yr": str(est_yr).strip(),
+                    "user_id": user_id_local,
+                    "module": "contract_management",
+                },
+                push_history=False,
+            )
+            return True
+
+        if project_name:
+            open_flow_page(
+                "project_detail",
+                data={"project_name": project_name, "module": "contract_management"},
+                push_history=False,
+            )
+            return True
+
+    open_flow_page("new_application", data={"module": module_name}, push_history=False)
+    return True
+
+
 def back_flow_page():
+    # 1) Immediate flow history (primary source of "previous page")
     history = st.session_state.get("flow_history", [])
     if history:
         previous = history.pop()
@@ -446,12 +643,41 @@ def back_flow_page():
         st.session_state.flow_page = previous.get("page")
         st.session_state.flow_data = previous.get("data", {})
         return
-    st.session_state.pop("flow_page", None)
-    st.session_state.pop("flow_data", None)
-    st.session_state.pop("show_up_id", None)
+
+    # 2) Module-return context captured when entering module form view.
+    if restore_module_return_flow():
+        return
+
+    # 3) If a flow page is open with no history, close just that page.
+    if st.session_state.get("flow_page"):
+        st.session_state.pop("flow_page", None)
+        st.session_state.pop("flow_data", None)
+        st.session_state.pop("show_up_id", None)
+        return
+
+    # 4) Restore immediate previous context from module state when flow history is unavailable.
+    if _restore_previous_from_module_context():
+        return
+
+    # 5) Global back stack fallback for edge cases where explicit history/context is unavailable.
+    stack = st.session_state.get("nav_back_stack", [])
+    current_sig = _current_location_signature()
+    while stack:
+        candidate = stack.pop()
+        candidate_sig = candidate.get("location_signature")
+        if candidate_sig == current_sig:
+            continue
+        st.session_state.nav_back_stack = stack
+        if _restore_navigation_snapshot(candidate):
+            return
+    st.session_state.nav_back_stack = stack
+
+    # 6) Last fallback.
+    st.session_state.current_view = "Main"
 
 
 def close_flow_page():
+    _push_navigation_snapshot()
     st.session_state.pop("flow_page", None)
     st.session_state.pop("flow_data", None)
     st.session_state.pop("flow_history", None)
@@ -485,16 +711,39 @@ def restore_module_return_flow():
     return True
 
 
-def render_flow_header(title, back_key):
-    c1, c2 = st.columns([1, 6])
-    with c1:
-        if st.button("← Back", key=back_key, type="tertiary", width="content"):
-            st.session_state.pop("show_up_id", None)
-            back_flow_page()
-            st.rerun()
-    with c2:
-        st.markdown(f"### {title}")
+def render_back_link(back_key):
+    try:
+        clicked = st.button("<- Back", key=back_key, type="tertiary")
+    except Exception:
+        clicked = st.button("<- Back", key=f"{back_key}_fallback")
+    if clicked:
+        st.session_state.pop("show_up_id", None)
+        back_flow_page()
+        st.rerun()
 
+
+def render_flow_header(title, back_key, align="left"):
+    align_value = str(align or "left").strip().lower()
+    if align_value == "center":
+        c1, c2, c3 = st.columns([1, 6, 1])
+        with c1:
+            render_back_link(back_key)
+        with c2:
+            st.markdown(
+                f'<div class="flow-page-title flow-page-title-center">{esc_html(title)}</div>',
+                unsafe_allow_html=True,
+            )
+        with c3:
+            st.markdown("", unsafe_allow_html=True)
+    else:
+        c1, c2 = st.columns([1, 6])
+        with c1:
+            render_back_link(back_key)
+        with c2:
+            st.markdown(
+                f'<div class="flow-page-title">{esc_html(title)}</div>',
+                unsafe_allow_html=True,
+            )
 
 def normalize_year_option(raw_value):
     if raw_value is None:
@@ -723,8 +972,7 @@ def render_estimate_group_page(est_no, est_yr, user_id=None, module=None):
         st.markdown(
             (
                 f'<div style="text-align:center; margin:2px 0 10px 0;">'
-                f'<a href="{start_contract_href}" target="_self" class="dashboard-project-link" '
-                f'style="font-weight:800; font-size:15px;">Start New Contract for this Estimate</a>'
+                f'<a href="{start_contract_href}" target="_self" class="cta-link">Start New Contract for this Estimate</a>'
                 f'</div>'
             ),
             unsafe_allow_html=True,
@@ -732,89 +980,80 @@ def render_estimate_group_page(est_no, est_yr, user_id=None, module=None):
 
     st.markdown("<hr style='margin:8px 0;'>", unsafe_allow_html=True)
 
-    submissions = get_submissions_by_estimate(est_no, est_yr, user_id=user_id, module=module)
+    all_submissions = get_submissions_by_estimate(est_no, est_yr, user_id=user_id, module=module)
+    submissions, _ = _split_contract_submissions(
+        all_submissions,
+        module_key=module or "contract_management",
+    )
     if submissions:
         submissions.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
 
     if not submissions:
-        st.info("No applications found for this estimate.")
+        st.info("No contracts found for this estimate yet.")
     else:
-        h1, h_id, h2, h3, h4, r_spacer, h6 = st.columns([0.6, 0.7, 1.6, 1.4, 1.4, 0.4, 1.8])
-        h1.markdown("**S.No**"); h_id.markdown("**ID**"); h2.markdown("**User**")
-        h3.markdown("**Date**"); h4.markdown("**Status**"); h6.markdown("**Action**")
-        st.markdown("<hr style='margin:0 0 8px 0;'>", unsafe_allow_html=True)
-
+        rows_html = ""
         for i, s in enumerate(submissions, 1):
-            r1, r_id, r2, r3, r4, r_spacer2, r6 = st.columns([0.6, 0.7, 1.6, 1.4, 1.4, 0.4, 1.8])
-            status = s.get("status", "DRAFT")
-            status_bg = "#fffbeb" if status == "DRAFT" else "#ecfdf5"
-            status_text_c = "#92400e" if status == "DRAFT" else "#065f46"
-            status_bdr = "#fcd34d" if status == "DRAFT" else "#a7f3d0"
-            row_id = _safe_key(s.get("id"))
+            status = str(s.get("status") or "DRAFT").strip().upper()
+            badge_cls = "badge-pending" if status == "DRAFT" else "badge-done"
+            badge_txt = "DRAFT" if status == "DRAFT" else "COMPLETED"
 
-            with r1:
-                st.write(f"**{i}**")
-            with r_id:
-                st.code(f"{s['id']}")
-            with r2:
-                st.write(s.get("created_by_user", "Unknown"))
-            with r3:
-                st.write(fmt_dt(s.get("created_at")))
-            with r4:
-                st.markdown(
-                    f'<span style="background:{status_bg}; color:{status_text_c}; '
-                    f'border:1px solid {status_bdr}; padding:2px 10px; border-radius:4px; '
-                    f'font-size:11px; font-weight:700;">{status}</span>',
-                    unsafe_allow_html=True,
-                )
-                if status == "COMPLETED":
-                    has_estimate_file = bool((s.get("estimate_attachment") or "").strip())
-                    if not has_estimate_file:
-                        st.markdown(
-                            "<div style='margin-top:4px;font-size:11px;font-weight:600;color:#dc2626;'>Estimate Missing</div>",
-                            unsafe_allow_html=True,
-                        )
-                    else:
-                        st.markdown(
-                            "<div style='margin-top:4px;font-size:11px;font-weight:600;color:#059669;'>Estimate Uploaded</div>",
-                            unsafe_allow_html=True,
-                        )
-
-            with r6:
-                if status == "DRAFT" and not is_admin_user:
-                    resume_href = (
-                        f'./?contract_action=resume&sub_id={s["id"]}'
-                        f'&est_no={quote(str(est_no))}&est_yr={quote(str(est_yr))}'
-                    )
-                    st.markdown(
-                        f'<a href="{resume_href}" target="_self" class="dashboard-project-link">Resume</a>',
-                        unsafe_allow_html=True,
-                    )
+            status_note = ""
+            if status == "COMPLETED":
+                has_estimate_file = bool((s.get("estimate_attachment") or "").strip())
+                if has_estimate_file:
+                    status_note = '<div class="contract-status-note uploaded">Estimate Uploaded</div>'
                 else:
-                    view_href = (
-                        f'./?contract_action=view&sub_id={s["id"]}'
+                    status_note = '<div class="contract-status-note missing">Estimate Missing</div>'
+
+            if status == "DRAFT" and not is_admin_user:
+                resume_href = (
+                    f'./?contract_action=resume&sub_id={s["id"]}'
+                    f'&est_no={quote(str(est_no))}&est_yr={quote(str(est_yr))}'
+                )
+                action_html = f'<a href="{resume_href}" target="_self" class="dashboard-project-link">Resume</a>'
+            else:
+                view_href = (
+                    f'./?contract_action=view&sub_id={s["id"]}'
+                    f'&est_no={quote(str(est_no))}&est_yr={quote(str(est_yr))}'
+                )
+                action_links = [
+                    f'<a href="{view_href}" target="_self" class="dashboard-project-link">View</a>'
+                ]
+                if status == "COMPLETED":
+                    upload_href = (
+                        f'./?contract_action=upload&sub_id={s["id"]}'
                         f'&est_no={quote(str(est_no))}&est_yr={quote(str(est_yr))}'
                     )
-                    action_links = [
-                        f'<a href="{view_href}" target="_self" class="dashboard-project-link">View</a>'
-                    ]
-                    if status == "COMPLETED":
-                        upload_href = (
-                            f'./?contract_action=upload&sub_id={s["id"]}'
-                            f'&est_no={quote(str(est_no))}&est_yr={quote(str(est_yr))}'
-                        )
-                        action_links.append(
-                            f'<a href="{upload_href}" target="_self" class="dashboard-project-link">Upload</a>'
-                        )
-                    st.markdown(
-                        f'<div class="inline-link-actions">{" | ".join(action_links)}</div>',
-                        unsafe_allow_html=True,
+                    action_links.append(
+                        f'<a href="{upload_href}" target="_self" class="dashboard-project-link">Upload</a>'
                     )
+                action_html = f'<div class="inline-link-actions">{" | ".join(action_links)}</div>'
 
-            st.markdown(
-                "<hr style='margin:8px 0; border:0; border-top:1px solid #f3f4f6;'>",
-                unsafe_allow_html=True,
+            rows_html += (
+                "<tr>"
+                f'<td class="td-sno">{i:02d}</td>'
+                f'<td class="td-id">{esc_html(s.get("id"))}</td>'
+                f'<td>{esc_html(s.get("created_by_user", "Unknown"))}</td>'
+                f'<td>{esc_html(fmt_dt(s.get("created_at")))}</td>'
+                f'<td class="td-status"><span class="status-badge {badge_cls}">{badge_txt}</span>{status_note}</td>'
+                f"<td>{action_html}</td>"
+                "</tr>"
             )
+
+        table_html = (
+            '<table class="proj-table contract-list-table" style="margin-top:4px;">'
+            "<thead><tr>"
+            '<th style="width:56px;">S.No</th>'
+            '<th style="width:90px;">ID</th>'
+            "<th>User</th>"
+            '<th style="width:230px;">Date</th>'
+            '<th style="width:290px;">Status</th>'
+            '<th style="width:170px;">Action</th>'
+            "</tr></thead>"
+            f"<tbody>{rows_html}</tbody>"
+            "</table>"
+        )
+        st.markdown(table_html, unsafe_allow_html=True)
 
         if st.session_state.get("show_up_id"):
             up_id = st.session_state.show_up_id
@@ -973,9 +1212,16 @@ def get_project_estimate_groups(project_name):
 
     completed = get_user_master_submissions(user_id, module="contract_management")
     drafts = [d for d in get_user_draft_summaries(user_id) if d.get("module") == "contract_management"]
+    all_records = completed + drafts
+    real_contract_records, _ = _split_contract_submissions(all_records, module_key="contract_management")
+    real_contract_ids = set()
+    for rec in real_contract_records:
+        rec_id = _to_int_id(rec.get("id"))
+        if rec_id is not None:
+            real_contract_ids.add(rec_id)
 
     grouped = {}
-    for rec in completed + drafts:
+    for rec in all_records:
         pname = " ".join((rec.get("name_of_project") or "").split()).lower()
         if pname != project_key:
             continue
@@ -993,40 +1239,39 @@ def get_project_estimate_groups(project_name):
                 "year_of_estimate": est_yr,
                 "status": rec.get("status", "DRAFT"),
                 "latest_date": rec.get("created_at"),
-                "contract_count": 1,
+                "contract_count": 0,
             }
         else:
             existing = grouped[grp_key]
-            existing["contract_count"] = int(existing.get("contract_count") or 0) + 1
             if str(rec.get("created_at") or "") > str(existing.get("latest_date") or ""):
                 existing["latest_date"] = rec.get("created_at")
             if rec.get("status") == "COMPLETED":
                 existing["status"] = "COMPLETED"
 
+        rec_id = _to_int_id(rec.get("id"))
+        if rec_id is not None and rec_id in real_contract_ids:
+            grouped[grp_key]["contract_count"] = int(grouped[grp_key].get("contract_count") or 0) + 1
+
     results = list(grouped.values())
-    for item in results:
-        est_no = item.get("estimate_number")
-        est_yr = item.get("year_of_estimate")
-        if not est_no or not est_yr:
-            continue
-
-        # Reconcile contract totals from master_submission source to avoid undercount
-        # when drafts/completed lists are out-of-sync.
-        same_est = get_submissions_by_estimate(
-            est_no,
-            est_yr,
-            user_id=user_id,
-            module="contract_management",
-        )
-        item["contract_count"] = len(same_est)
-
     results.sort(key=lambda x: str(x.get("latest_date") or ""), reverse=True)
     return results
 
 
 def get_contract_mini_dashboard_stats(project_catalog=None):
-    completed_contracts = get_user_master_submissions(user_id, module="contract_management")
-    draft_contracts = [d for d in get_user_draft_summaries(user_id) if d.get("module") == "contract_management"]
+    completed_contracts_raw = get_user_master_submissions(user_id, module="contract_management")
+    draft_contracts_raw = [d for d in get_user_draft_summaries(user_id) if d.get("module") == "contract_management"]
+    visible_contracts, _ = _split_contract_submissions(
+        completed_contracts_raw + draft_contracts_raw,
+        module_key="contract_management",
+    )
+    completed_contracts = []
+    draft_contracts = []
+    for rec in visible_contracts:
+        status = str(rec.get("status") or "").strip().upper()
+        if status == "DRAFT":
+            draft_contracts.append(rec)
+        else:
+            completed_contracts.append(rec)
 
     estimate_groups = {}
 
@@ -1060,9 +1305,9 @@ def get_contract_mini_dashboard_stats(project_catalog=None):
         if str(rec.get("created_at") or "") > str(group.get("latest_date") or ""):
             group["latest_date"] = rec.get("created_at")
 
-    for rec in completed_contracts:
+    for rec in completed_contracts_raw:
         _add_estimate_record(rec, is_draft=False)
-    for rec in draft_contracts:
+    for rec in draft_contracts_raw:
         _add_estimate_record(rec, is_draft=True)
 
     completed_estimates = sum(
@@ -1393,6 +1638,19 @@ def render_create_dpr_page(flow_data=None):
     existing_dpr = get_project_dpr(user_id, project_name, module="contract_management") or {}
     existing_fields = get_existing_dpr_fields(existing_dpr)
 
+    # Parse existing payload early â€” needed for upload status display
+    existing_payload_raw = existing_dpr.get("dpr_form_data")
+    existing_payload = {}
+    if isinstance(existing_payload_raw, dict):
+        existing_payload = existing_payload_raw
+    elif isinstance(existing_payload_raw, str) and existing_payload_raw.strip():
+        try:
+            parsed_payload = json.loads(existing_payload_raw)
+            if isinstance(parsed_payload, dict):
+                existing_payload = parsed_payload
+        except (TypeError, ValueError):
+            existing_payload = {}
+
     field_configs = get_dpr_field_configs()
     for cfg in field_configs:
         label = cfg["label"]
@@ -1425,10 +1683,20 @@ def render_create_dpr_page(flow_data=None):
         else:
             st.session_state[state_key] = "" if existing_value in (None, "") else str(existing_value)
 
-    st.markdown(
-        "<div style='font-size:13px;color:#6b7280;margin-bottom:8px;'>Please complete DPR first before creating estimate.</div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("""
+    <div class="form-section-heading">&#128196; Project DPR &mdash; Base Information</div>
+    <div class="form-section-sub">All fields below are optional. Fill only the details currently available.</div>
+    """, unsafe_allow_html=True)
+
+    BASE_LABELS = {
+        "Category of Project", "Type of Project", "Location of Head Works",
+        "Date of Investement clearance by GOI", "Date of CWC clearence",
+        "Date of approval of EFC", "Districts covered", "Gross Command area", "CCA",
+        "Irrigation Potential in RABI", "Irrigation Potential in KHARIF",
+        "Requirement of Water for project", "Availability of Water against the requirement",
+        "Pre-Project Crop Pattern in RABI", "Pre-Project Crop Pattern in KHARIF",
+        "Post-Project Crop Pattern in RABI", "Post-Project Crop Pattern in KHARIF",
+    }
 
     col1, col2 = st.columns(2)
     form_values = {}
@@ -1436,9 +1704,9 @@ def render_create_dpr_page(flow_data=None):
         label = cfg["label"]
         ftype = cfg["type"]
         if ftype == "section":
-            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-            st.markdown(f"#### {label}")
             continue
+        if label not in BASE_LABELS:
+            continue  # revisions handled separately below
         state_key = f"dpr_form_{_safe_key(label)}_{safe_project}"
         target_col = col1 if idx % 2 == 0 else col2
         with target_col:
@@ -1452,49 +1720,100 @@ def render_create_dpr_page(flow_data=None):
                 value = st.text_input(label, key=state_key)
         form_values[label] = value
 
-    existing_payload_raw = existing_dpr.get("dpr_form_data")
-    existing_payload = {}
-    if isinstance(existing_payload_raw, dict):
-        existing_payload = existing_payload_raw
-    elif isinstance(existing_payload_raw, str) and existing_payload_raw.strip():
-        try:
-            parsed_payload = json.loads(existing_payload_raw)
-            if isinstance(parsed_payload, dict):
-                existing_payload = parsed_payload
-        except (TypeError, ValueError):
-            existing_payload = {}
+    # Base DPR uploads
+    st.markdown("<hr class='form-section-divider'>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="form-section-heading">&#128206; Base DPR Documents</div>
+    <div class="form-section-sub">All uploads are optional. You can upload documents now or later.</div>
+    """, unsafe_allow_html=True)
 
     upload_configs = [
-        {"key": "upload_complete_dpr", "label": "Upload Complete DPR", "required": True},
-        {"key": "investment_clearence", "label": "Investment clearence", "required": True},
-        {"key": "cwc_clearence", "label": "CWC clearence", "required": True},
-        {"key": "dpr_approval_by_efc", "label": "DPR Approval by EFC", "required": True},
-        {"key": "survey_reports", "label": "Survey Reports", "required": True},
+        {"key": "upload_complete_dpr", "label": "Final Approved DPR"},
+        {"key": "investment_clearence", "label": "Investment Clearance"},
+        {"key": "cwc_clearence", "label": "CWC Clearance"},
+        {"key": "dpr_approval_by_efc", "label": "DPR Approval by EFC"},
+        {"key": "survey_reports", "label": "Survey Reports"},
     ]
 
-    st.markdown("#### DPR Documents")
     upload_inputs = {}
-    for cfg in upload_configs:
-        label = cfg["label"] + (" (mandatory)" if cfg["required"] else "")
-        upload_inputs[cfg["key"]] = st.file_uploader(
-            label,
-            type=["pdf", "doc", "docx", "xlsx", "xls", "jpg", "jpeg", "png"],
-            key=f"dpr_upload_{cfg['key']}_{safe_project}",
-        )
-        file_name_key = f"{cfg['key']}_file_name"
-        existing_file_name = existing_payload.get(file_name_key)
-        if cfg["key"] == "upload_complete_dpr" and not existing_file_name:
-            existing_file_name = existing_dpr.get("dpr_file_name")
-        if existing_file_name:
-            st.caption(f"Existing: {existing_file_name}")
+    upc1, upc2 = st.columns(2)
+    for ci, cfg in enumerate(upload_configs):
+        target_col = upc1 if ci % 2 == 0 else upc2
+        with target_col:
+            upload_inputs[cfg["key"]] = st.file_uploader(
+                cfg["label"],
+                type=["pdf", "doc", "docx", "xlsx", "xls", "jpg", "jpeg", "png"],
+                key=f"dpr_upload_{cfg['key']}_{safe_project}",
+            )
+            file_name_key = f"{cfg['key']}_file_name"
+            existing_file_name = existing_payload.get(file_name_key)
+            if cfg["key"] == "upload_complete_dpr" and not existing_file_name:
+                existing_file_name = existing_dpr.get("dpr_file_name")
+            if existing_file_name:
+                st.caption(f"On record: {existing_file_name}")
 
     if existing_dpr:
         last_file = existing_dpr.get("dpr_file_name") or "N/A"
         updated_at = fmt_dt(existing_dpr.get("updated_at"))
-        st.success(f"Existing DPR found. File: `{last_file}` | Last Updated: {updated_at}")
+        st.success(f"Existing DPR on record - File: `{last_file}` | Updated: {updated_at}")
 
-    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-    if st.button("Create DPR", key=f"btn_save_dpr_{safe_project}", use_container_width=True, type="primary"):
+    # Revision sections
+    st.markdown("<hr class='form-section-divider'>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="form-section-heading">&#128260; DPR Revisions</div>
+    <div class="form-section-sub">Fill details for each revision of the DPR. Only fill revisions that have occurred.</div>
+    """, unsafe_allow_html=True)
+
+    rev_ordinals = {1: "1st", 2: "2nd", 3: "3rd"}
+    for rev_num in range(1, 7):
+        rev_label_sfx = rev_ordinals.get(rev_num, f"{rev_num}th")
+        rev_title = f"{rev_label_sfx} Revision"
+        st.markdown(f"""
+        <div class="revision-section">
+            <div class="revision-section-title">&#9634;&nbsp; {rev_title}</div>
+            <div class="revision-section-sub">Enter details for the {rev_title.lower()} of the DPR, if applicable.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        rc1, rc2, rc3 = st.columns(3)
+        for col_idx, (field_suffix, col_widget) in enumerate([
+            (f"Date of approval revised DPR ({rev_label_sfx} revision)", rc1),
+            (f"Amount of revised DPR ({rev_label_sfx} revision)", rc2),
+            (f"Target date to complete the project ({rev_label_sfx} revision)", rc3),
+        ]):
+            state_key = f"dpr_form_{_safe_key(field_suffix)}_{safe_project}"
+            cfg_match = next((c for c in field_configs if c["label"] == field_suffix), None)
+            if not cfg_match:
+                continue
+            with col_widget:
+                if cfg_match["type"] == "date":
+                    value = st.date_input(cfg_match["label"], key=state_key)
+                else:
+                    value = st.text_input(cfg_match["label"], key=state_key)
+            form_values[field_suffix] = value
+
+        # Revision PDF upload
+        rev_up_key = f"dpr_rev_{rev_num}_pdf_{safe_project}"
+        rev_file_name_key = f"revision_{rev_num}_file_name"
+        existing_rev_file = existing_payload.get(rev_file_name_key)
+        upload_inputs[f"revision_{rev_num}"] = st.file_uploader(
+            f"Upload {rev_title} DPR (PDF)",
+            type=["pdf", "doc", "docx", "jpg", "jpeg", "png"],
+            key=rev_up_key,
+        )
+        if existing_rev_file:
+            st.caption(f"On record: {existing_rev_file}")
+
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+    save_col, cancel_col = st.columns([4, 1])
+    with save_col:
+        save_clicked = st.button("Save DPR", key=f"btn_save_dpr_{safe_project}", use_container_width=True, type="primary")
+    with cancel_col:
+        if st.button("Cancel", key=f"btn_cancel_dpr_{safe_project}", use_container_width=True):
+            back_flow_page()
+            st.rerun()
+
+    if save_clicked:
         cleaned_values = {}
         for cfg in field_configs:
             label = cfg["label"]
@@ -1502,66 +1821,67 @@ def render_create_dpr_page(flow_data=None):
             if ftype == "section":
                 continue
             value = form_values.get(label)
-            is_optional = bool(cfg.get("optional"))
 
             if ftype == "select":
-                if value in (None, "", "-- Select --"):
-                    st.error(f"Please select `{label}`.")
-                    return
-                cleaned_values[label] = value
+                if value not in (None, "", "-- Select --"):
+                    cleaned_values[label] = value
             elif ftype == "multiselect":
                 selected_values = [str(v).strip() for v in (value or []) if str(v).strip()]
-                if not selected_values and not is_optional:
-                    st.error(f"Please select at least one option for `{label}`.")
-                    return
                 cleaned_values[label] = ", ".join(selected_values) if selected_values else None
             elif ftype == "date":
-                if value in (None, "") and not is_optional:
-                    st.error(f"Please select `{label}`.")
-                    return
                 cleaned_values[label] = normalize_date_for_storage(value) if value not in (None, "") else None
             else:
                 text_value = (str(value) if value is not None else "").strip()
-                if not text_value and not is_optional:
-                    st.error(f"Please enter `{label}`.")
-                    return
                 cleaned_values[label] = text_value if text_value else None
 
         selected_file_name = existing_dpr.get("dpr_file_name")
         selected_file_path = existing_dpr.get("dpr_file_path")
         os.makedirs("uploads", exist_ok=True)
+
+        # Save base document uploads
         for cfg in upload_configs:
             file_name_key = f"{cfg['key']}_file_name"
             file_path_key = f"{cfg['key']}_file_path"
             saved_file_name = existing_payload.get(file_name_key)
             saved_file_path = existing_payload.get(file_path_key)
-
             if cfg["key"] == "upload_complete_dpr":
                 if not saved_file_name:
                     saved_file_name = selected_file_name
                 if not saved_file_path:
                     saved_file_path = selected_file_path
-
             upload_obj = upload_inputs.get(cfg["key"])
             if upload_obj:
                 ext = os.path.splitext(upload_obj.name)[1]
                 ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
                 fname = f"DPR_{safe_project}_{_safe_key(cfg['key'])}_{ts}{ext}"
                 saved_file_path = os.path.join("uploads", fname)
-                with open(saved_file_path, "wb") as f:
-                    f.write(upload_obj.getbuffer())
+                with open(saved_file_path, "wb") as fh:
+                    fh.write(upload_obj.getbuffer())
                 saved_file_name = upload_obj.name
-
-            if cfg["required"] and not saved_file_name:
-                st.error(f"Please upload `{cfg['label']}`.")
-                return
-
             cleaned_values[file_name_key] = saved_file_name
             cleaned_values[file_path_key] = saved_file_path
-
             if cfg["key"] == "upload_complete_dpr":
                 selected_file_name = saved_file_name
                 selected_file_path = saved_file_path
+
+        # Save revision PDF uploads
+        for rev_num in range(1, 7):
+            rev_key = f"revision_{rev_num}"
+            rev_file_name_key = f"revision_{rev_num}_file_name"
+            rev_file_path_key = f"revision_{rev_num}_file_path"
+            saved_rev_name = existing_payload.get(rev_file_name_key)
+            saved_rev_path = existing_payload.get(rev_file_path_key)
+            rev_upload = upload_inputs.get(rev_key)
+            if rev_upload:
+                ext = os.path.splitext(rev_upload.name)[1]
+                ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                fname = f"DPR_{safe_project}_rev{rev_num}_{ts}{ext}"
+                saved_rev_path = os.path.join("uploads", fname)
+                with open(saved_rev_path, "wb") as fh:
+                    fh.write(rev_upload.getbuffer())
+                saved_rev_name = rev_upload.name
+            cleaned_values[rev_file_name_key] = saved_rev_name
+            cleaned_values[rev_file_path_key] = saved_rev_path
 
         is_saved = upsert_project_dpr(
             user_id=user_id,
@@ -1575,7 +1895,7 @@ def render_create_dpr_page(flow_data=None):
             st.error("Unable to save DPR right now. Please try again.")
             return
 
-        st.success("DPR created successfully.")
+        st.success("DPR saved successfully.")
         back_flow_page()
         st.rerun()
 
@@ -1603,34 +1923,21 @@ def render_dpr_view_page(flow_data=None):
             st.rerun()
         return
 
-    top1, top2 = st.columns([2, 1])
-    with top1:
-        file_name = project_dpr.get("dpr_file_name") or "N/A"
-        updated_at = fmt_dt(project_dpr.get("updated_at"))
-        st.markdown(
-            f"<div style='font-size:13px;color:#6b7280;'>File: <b>{esc_html(file_name)}</b> | Last Updated: {esc_html(updated_at)}</div>",
-            unsafe_allow_html=True,
-        )
-    with top2:
-        if st.button("Update DPR Data", key=f"btn_dpr_view_update_{safe_project}", use_container_width=True, type="primary"):
-            open_flow_page(
-                "create_dpr",
-                data={"project_name": project_name, "module": "contract_management"},
-                push_history=True,
-            )
-            st.rerun()
-
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    st.markdown("#### DPR Form Data")
     existing_fields = get_existing_dpr_fields(project_dpr)
+
+    field_sections = []
+    current_section_name = "DPR Overview"
+    current_section_items = []
     for cfg in get_dpr_field_configs():
         label = cfg.get("label")
         ftype = cfg.get("type")
         if not label:
             continue
         if ftype == "section":
-            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-            st.markdown(f"##### {label}")
+            if current_section_items:
+                field_sections.append((current_section_name, current_section_items))
+            current_section_name = label
+            current_section_items = []
             continue
 
         raw_val = existing_fields.get(label)
@@ -1638,12 +1945,9 @@ def render_dpr_view_page(flow_data=None):
             display_val = ", ".join([str(v) for v in raw_val if str(v).strip()]) or "N/A"
         else:
             display_val = str(raw_val).strip() if raw_val not in (None, "") else "N/A"
-
-        c1, c2 = st.columns([2.8, 4.2])
-        with c1:
-            st.markdown(f"**{label}**")
-        with c2:
-            st.markdown(f"<span>{esc_html(display_val)}</span>", unsafe_allow_html=True)
+        current_section_items.append((label, display_val))
+    if current_section_items:
+        field_sections.append((current_section_name, current_section_items))
 
     payload_raw = project_dpr.get("dpr_form_data")
     payload = {}
@@ -1662,18 +1966,90 @@ def render_dpr_view_page(flow_data=None):
         ("DPR Approval by EFC", "dpr_approval_by_efc_file_name"),
         ("Survey Reports", "survey_reports_file_name"),
     ]
-    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-    st.markdown("#### DPR Documents")
+    file_name = project_dpr.get("dpr_file_name") or "N/A"
+    updated_at = fmt_dt(project_dpr.get("updated_at"))
+
+    total_fields = sum(len(items) for _, items in field_sections)
+    filled_fields = sum(1 for _, items in field_sections for _, val in items if str(val).strip() and str(val).strip().upper() != "N/A")
+
+    doc_rows = []
+    uploaded_docs = 0
     for label, key_name in docs:
-        file_name = payload.get(key_name) or project_dpr.get(key_name)
-        if key_name == "upload_complete_dpr_file_name" and not file_name:
-            file_name = project_dpr.get("dpr_file_name")
-        display_file = str(file_name).strip() if file_name not in (None, "") else "N/A"
-        c1, c2 = st.columns([2.8, 4.2])
-        with c1:
-            st.markdown(f"**{label}**")
-        with c2:
-            st.markdown(f"<span>{esc_html(display_file)}</span>", unsafe_allow_html=True)
+        doc_name = payload.get(key_name) or project_dpr.get(key_name)
+        if key_name == "upload_complete_dpr_file_name" and not doc_name:
+            doc_name = project_dpr.get("dpr_file_name")
+        display_file = str(doc_name).strip() if doc_name not in (None, "") else "N/A"
+        if display_file != "N/A":
+            uploaded_docs += 1
+        doc_rows.append((label, display_file))
+
+    st.markdown(
+        f"""
+        <div class="dpr-view-hero">
+            <div class="dpr-view-hero-left">
+                <div class="dpr-view-eyebrow">DPR Profile</div>
+                <div class="dpr-view-title">{esc_html(project_name)}</div>
+                <div class="dpr-view-meta">
+                    File: <strong>{esc_html(file_name)}</strong>
+                    <span class="dpr-view-meta-sep">|</span>
+                    Last Updated: {esc_html(updated_at)}
+                </div>
+            </div>
+            <div class="dpr-view-legend">
+                <span class="status-badge badge-not-started">Fields: {filled_fields}/{max(total_fields, 1)}</span>
+                <span class="status-badge badge-done">Documents: {uploaded_docs}/{len(docs)}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    act_spacer, act_col = st.columns([2.8, 1.2])
+    with act_col:
+            edit_dpr_href = f'./?dpr_action=edit&project={quote(str(project_name))}&from_flow=dpr_view'
+            st.markdown(
+                (
+                    '<div style="text-align:right; margin:8px 0 0 0;">'
+                    f'<a href="{edit_dpr_href}" target="_self" class="cta-link cta-sm">Update DPR Data</a>'
+                    '</div>'
+                ),
+                unsafe_allow_html=True,
+            )
+
+    section_cards_html = ""
+    for section_name, items in field_sections:
+        rows_html = "".join(
+            f'<div class="dpr-kv-row"><div class="dpr-kv-key">{esc_html(lbl)}</div><div class="dpr-kv-val">{esc_html(val)}</div></div>'
+            for lbl, val in items
+        )
+        section_cards_html += (
+            '<div class="dpr-section-card">'
+            f'<div class="dpr-section-card-title">{esc_html(section_name)}</div>'
+            f'<div class="dpr-kv-list">{rows_html}</div>'
+            '</div>'
+        )
+
+    doc_rows_html = "".join(
+        f'<div class="dpr-kv-row"><div class="dpr-kv-key">{esc_html(lbl)}</div><div class="dpr-kv-val">{esc_html(val)}</div></div>'
+        for lbl, val in doc_rows
+    )
+    docs_card_html = (
+        '<div class="dpr-section-card dpr-docs-card">'
+        '<div class="dpr-section-card-title">DPR Documents</div>'
+        f'<div class="dpr-kv-list">{doc_rows_html}</div>'
+        '</div>'
+    )
+
+    st.markdown(
+        (
+            '<div class="dpr-view-body">'
+            '<div class="dpr-view-heading">DPR Form Data</div>'
+            f'<div class="dpr-sections-grid">{section_cards_html}</div>'
+            f'{docs_card_html}'
+            '</div>'
+        ),
+        unsafe_allow_html=True,
+    )
 
 
 def render_create_estimate_page(flow_data=None):
@@ -1681,7 +2057,7 @@ def render_create_estimate_page(flow_data=None):
     project_name = (flow_data.get("project_name") or "").strip()
     safe_project = _safe_key(project_name or "project")
     render_flow_header(
-        f"Create Estimate: {project_name or 'Unknown'}",
+        f"New Estimate - {project_name or 'Unknown'}",
         back_key=f"back_create_est_{safe_project}",
     )
 
@@ -1696,7 +2072,7 @@ def render_create_estimate_page(flow_data=None):
     project_dpr = get_project_dpr(user_id, project_name, module="contract_management")
     has_dpr = bool(project_dpr)
     if is_fresh_project and not has_dpr:
-        st.warning("Please create DPR first for this project.")
+        st.warning("Please create the DPR for this project first before adding estimates.")
         if st.button("Go To Create DPR", key=f"goto_create_dpr_{safe_project}", use_container_width=True, type="primary"):
             open_flow_page(
                 "create_dpr",
@@ -1706,18 +2082,22 @@ def render_create_estimate_page(flow_data=None):
             st.rerun()
         return
 
+    # Show project context
+    st.markdown(f"""
+    <div style="background:var(--primary-pale);border:1px solid var(--border);border-left:3px solid var(--primary);
+                border-radius:0 8px 8px 0;padding:12px 18px;margin-bottom:20px;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-faint);text-transform:uppercase;
+                    letter-spacing:0.6px;margin-bottom:3px;">Project</div>
+        <div style="font-family:'Crimson Pro',serif;font-size:18px;font-weight:600;
+                    color:var(--primary);">{esc_html(project_name)}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
     nm_proj_key = f"header_modal_nm_proj_{safe_project}"
     est_no_key = f"header_modal_est_no_{safe_project}"
     est_yr_key = f"header_modal_est_yr_{safe_project}"
     if not st.session_state.get(nm_proj_key):
         st.session_state[nm_proj_key] = project_name
-
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    st.text_input(
-        "Name of Project",
-        placeholder="Enter project name",
-        key=nm_proj_key,
-    )
 
     prefill_est_no = flow_data.get("prefill_estimate_number")
     prefill_est_yr = normalize_year_option(flow_data.get("prefill_year_of_estimate"))
@@ -1738,10 +2118,21 @@ def render_create_estimate_page(flow_data=None):
             st.session_state[est_yr_key] = year_options[0]
         st.selectbox("Year of Estimate", options=year_options, key=est_yr_key)
 
-    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-    submit_col1, submit_col2 = st.columns([3.8, 1.2])
+    # Estimate PDF upload
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+    est_pdf_upload = st.file_uploader(
+        "Upload Estimate Document (PDF) *",
+        type=["pdf", "doc", "docx", "xlsx", "xls", "jpg", "jpeg", "png"],
+        key=f"est_pdf_upload_{safe_project}",
+    )
+    existing_est_file = st.session_state.get(f"est_pdf_saved_{safe_project}")
+    if existing_est_file:
+        st.caption(f"On record: {existing_est_file}")
+
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    submit_col1, submit_col2 = st.columns([4, 1])
     with submit_col1:
-        submit_clicked = st.button("Create Estimate ->", key=f"create_est_project_{safe_project}", use_container_width=True, type="primary")
+        submit_clicked = st.button("Create Estimate", key=f"create_est_project_{safe_project}", use_container_width=True, type="primary")
     with submit_col2:
         if st.button("Cancel", key=f"cancel_estimate_page_{safe_project}", use_container_width=True):
             back_flow_page()
@@ -1752,10 +2143,10 @@ def render_create_estimate_page(flow_data=None):
 
     est_no = (st.session_state.get(est_no_key) or "").strip()
     est_yr = st.session_state.get(est_yr_key)
-    nm_proj = (st.session_state.get(nm_proj_key) or project_name).strip()
+    nm_proj = project_name  # always use the project name from flow data
 
-    if not est_no or not est_yr or not nm_proj:
-        st.error("Please enter Name of Project, Estimate Number and Year.")
+    if not est_no or not est_yr:
+        st.error("Please enter Estimate Number and Year.")
         return
 
     existing_ones = get_submissions_by_estimate(
@@ -1777,10 +2168,18 @@ def render_create_estimate_page(flow_data=None):
         )
         st.rerun()
 
-    clear_module_state("contract_management")
-    st.session_state.initial_estimate_number = est_no
-    st.session_state.initial_year_of_estimate = est_yr
-    st.session_state.initial_name_of_project = nm_proj
+    # Save estimate PDF if uploaded
+    est_pdf_path = None
+    est_pdf_name = None
+    if est_pdf_upload:
+        os.makedirs("uploads", exist_ok=True)
+        ext = os.path.splitext(est_pdf_upload.name)[1]
+        ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        est_pdf_name = est_pdf_upload.name
+        est_pdf_path = os.path.join("uploads", f"EST_{safe_project}_{_safe_key(est_no)}_{ts}{ext}")
+        with open(est_pdf_path, "wb") as fh:
+            fh.write(est_pdf_upload.getbuffer())
+        st.session_state[f"est_pdf_saved_{safe_project}"] = est_pdf_name
 
     try:
         target_m_id = create_master_submission(
@@ -1792,13 +2191,23 @@ def render_create_estimate_page(flow_data=None):
             year_of_estimate=est_yr,
             name_of_project=nm_proj,
         )
-        st.session_state.master_id = target_m_id
-        st.session_state.current_view = "contract_management"
-        remember_flow_return_for_module()
-        close_flow_page()
+        # Save estimate attachment if uploaded
+        if est_pdf_path:
+            try:
+                update_master_attachments(target_m_id, estimate_path=est_pdf_path)
+            except Exception:
+                pass
+
+        # Return to project detail page â€” do NOT jump into contract form
+        open_flow_page(
+            "project_detail",
+            data={"project_name": nm_proj, "module": "contract_management"},
+            push_history=False,
+        )
+        st.success(f"Estimate {est_no} created successfully.")
         st.rerun()
     except Exception as e:
-        report_error("Error starting application.", e, "app.render_create_estimate_page")
+        report_error("Error creating estimate.", e, "app.render_create_estimate_page")
         return
 
 
@@ -1806,145 +2215,305 @@ def render_project_detail_page(flow_data=None):
     flow_data = flow_data or {}
     project_name = (flow_data.get("project_name") or "").strip()
     safe_project = _safe_key(project_name or "project")
-    render_flow_header(f"Project: {project_name or 'Unknown'}", back_key=f"back_project_detail_{safe_project}")
 
+    # Back button + breadcrumb in one clean line
+    back_col, _ = st.columns([1.5, 6])
+    with back_col:
+        render_back_link(f"back_project_detail_{safe_project}")
     if not project_name:
         st.warning("No project selected.")
         return
+
     st.session_state.current_project_name = project_name
 
     project_groups = get_project_estimate_groups(project_name)
     estimate_count = len(project_groups)
+    project_dpr = get_project_dpr(user_id, project_name, module="contract_management")
+    has_dpr = bool(project_dpr)
+    is_admin_user = st.session_state.get("role") == "admin"
+
+    # Count contracts across all estimates
+    total_contracts = sum(int(eg.get("contract_count") or 0) for eg in project_groups)
+
+    # â”€â”€ Project Header â”€â”€
+    dpr_badge = '<span class="status-badge badge-done">&#10003; DPR Done</span>' if has_dpr else '<span class="status-badge badge-pending">&#9675; DPR Pending</span>'
+    st.markdown(f"""
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+                padding:22px 28px;margin-bottom:20px;box-shadow:var(--shadow-xs);
+                border-left:4px solid var(--primary);">
+        <div style="font-size:10px;font-weight:700;color:var(--text-faint);text-transform:uppercase;
+                    letter-spacing:0.7px;margin-bottom:6px;">Project</div>
+        <div style="font-family:'Crimson Pro',serif;font-size:26px;font-weight:700;
+                    color:var(--primary);line-height:1.2;margin-bottom:10px;">{esc_html(project_name)}</div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;">
+            {dpr_badge}
+            <span style="font-size:12.5px;color:var(--text-muted);">
+                <strong style="color:var(--text-body);">{estimate_count}</strong> Estimate{"s" if estimate_count != 1 else ""}
+            </span>
+            <span style="font-size:12.5px;color:var(--text-muted);">
+                <strong style="color:var(--text-body);">{total_contracts}</strong> Contract{"s" if total_contracts != 1 else ""}
+            </span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # MODULE 1 â€” DPR
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     st.markdown(
         f"""
-        <div style="padding:10px 14px; border:1px solid #e5e8ef; border-radius:8px; background:#f8f9fc;">
-            <div style="font-size:12px; color:#6b7280;">Project Summary</div>
-            <div style="font-size:20px; font-weight:700; color:#1a3a6b;">{esc_html(project_name)}</div>
-            <div style="font-size:13px; color:#374151; margin-top:4px;">Total Estimates: <b>{estimate_count}</b></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 0 8px 0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:16px;">&#128203;</span>
+                <span style="font-family:'Crimson Pro',serif;font-size:18px;font-weight:700;color:var(--primary);">
+                    Module 1 &mdash; Detailed Project Report (DPR)
+                </span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-    st.markdown("#### Estimates in this Project")
-
-    if not project_groups:
-        st.info("No estimates created for this project yet.")
+    if has_dpr:
+        dpr_file = project_dpr.get("dpr_file_name") or "N/A"
+        dpr_updated = fmt_dt(project_dpr.get("updated_at"))
+        edit_dpr_href = f'./?dpr_action=edit&project={quote(str(project_name))}&from_flow=project_detail'
+        view_dpr_href = f'./?dpr_action=view&project={quote(str(project_name))}&from_flow=project_detail'
+        st.markdown(
+            f"""
+            <div style="background:var(--success-bg);border:1px solid var(--success-border);
+                        border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;">
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:12px;font-weight:700;color:var(--success-text);">
+                            &#10003; DPR on Record
+                        </div>
+                        <div style="font-size:12px;color:var(--success);margin-top:3px;">
+                            File: <strong>{esc_html(dpr_file)}</strong> &nbsp;&mdash;&nbsp; Last updated: {esc_html(dpr_updated)}
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+                        <a href="{edit_dpr_href}" target="_self" class="cta-link cta-sm">Update DPR</a>
+                        <a href="{view_dpr_href}" target="_self" class="cta-link cta-sm">View DPR Details</a>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     else:
-        page_key = f"project_estimates_page_{safe_project}"
-        page_size_key = f"{page_key}_size"
-        paged_estimates, start_idx, total_pages = paginate_list(project_groups, page_key, render_controls=False)
+        create_dpr_href = f'./?dpr_action=edit&project={quote(str(project_name))}&from_flow=project_detail'
+        st.markdown(
+            f"""
+            <div style="background:var(--info-bg);border:1px solid var(--info-border);
+                        border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div style="font-size:13px;font-weight:600;color:var(--info-text);">
+                        No DPR has been created for this project yet.
+                    </div>
+                    <a href="{create_dpr_href}" target="_self" class="cta-link cta-sm">Create DPR</a>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        h1, h2, h3, h4, h5, h6, h7 = st.columns([0.6, 2.9, 1.5, 1.4, 2.1, 1.6, 1.2])
-        h1.markdown("**S.No**")
-        h2.markdown("**Estimate Number**")
-        h3.markdown("**Year**")
-        h4.markdown("**Contracts**")
-        h5.markdown("**Last Updated**")
-        h6.markdown("**Status**")
-        with h7:
-            st.markdown('<div class="rows-per-page" style="margin-bottom:0;text-align:right;">Rows</div>', unsafe_allow_html=True)
-            new_size = st.selectbox(
-                "Size",
-                [10, 25, 50, 100],
-                index=[10, 25, 50, 100].index(st.session_state.get(page_size_key, 10)),
-                key=f"size_select_{safe_project}",
-                label_visibility="collapsed",
-            )
-            if new_size != st.session_state.get(page_size_key, 10):
-                st.session_state[page_size_key] = new_size
-                st.session_state[page_key] = 1
-                st.rerun()
 
-        st.markdown("<hr style='margin:4px 0; border-color:#e5e8ef;'>", unsafe_allow_html=True)
-
-        for i, est in enumerate(paged_estimates):
-            est_no = est.get("estimate_number")
-            est_yr = est.get("year_of_estimate")
-            status = est.get("status", "DRAFT")
-            latest = est.get("latest_date")
-            contract_count = int(est.get("contract_count") or 0)
-            s_no = start_idx + i + 1
-
-            r1, r2, r3, r4, r5, r6 = st.columns([0.6, 2.9, 1.5, 1.4, 2.1, 1.6])
-            r1.write(str(s_no))
-            display_est = str(est_no or "")
-            with r2:
-                est_group_href = (
-                    f'./?estimate_action=open_group&est_no={quote(str(est_no))}&est_yr={quote(str(est_yr))}'
-                    f'&project_name={quote(str(project_name))}'
-                )
-                st.markdown(
-                    f'<a href="{est_group_href}" target="_self" class="dashboard-project-link">{esc_html(display_est)}</a>',
-                    unsafe_allow_html=True,
-                )
-            with r3:
-                y_val = est_yr.year if hasattr(est_yr, "year") else est_yr
-                st.write(str(y_val))
-            with r4:
-                st.write(str(contract_count))
-            r5.write(fmt_dt(latest))
-            with r6:
-                status_bg = "#fffbeb" if status == "DRAFT" else "#ecfdf5"
-                status_text = "#92400e" if status == "DRAFT" else "#065f46"
-                status_bdr = "#fcd34d" if status == "DRAFT" else "#a7f3d0"
-                st.markdown(
-                    f'<span style="background:{status_bg}; color:{status_text}; border:1px solid {status_bdr}; '
-                    f'padding:2px 10px; border-radius:4px; font-size:11px; font-weight:700;">{status}</span>',
-                    unsafe_allow_html=True,
-                )
-            st.markdown("<hr style='margin:6px 0; border:0; border-top:1px solid #f3f4f6;'>", unsafe_allow_html=True)
-
-        render_pagination_footer(page_key, total_pages)
-
-    if estimate_count == 0:
-        project_dpr = get_project_dpr(user_id, project_name, module="contract_management")
-        has_dpr = bool(project_dpr)
-
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        st.markdown("#### DPR")
-        if has_dpr:
-            d1, d2 = st.columns(2)
-            with d1:
-                if st.button("Update DPR", key=f"btn_manage_dpr_{safe_project}", use_container_width=True, type="primary"):
-                    open_flow_page(
-                        "create_dpr",
-                        data={"project_name": project_name, "module": "contract_management"},
-                        push_history=True,
-                    )
-                    st.rerun()
-            with d2:
-                if st.button("View DPR Data", key=f"btn_view_dpr_{safe_project}", use_container_width=True):
-                    open_flow_page(
-                        "dpr_view",
-                        data={"project_name": project_name, "module": "contract_management"},
-                        push_history=True,
-                    )
-                    st.rerun()
-        else:
-            if st.button("Create DPR", key=f"btn_manage_dpr_{safe_project}", use_container_width=True, type="primary"):
-                open_flow_page(
-                    "create_dpr",
-                    data={"project_name": project_name, "module": "contract_management"},
-                    push_history=True,
-                )
-                st.rerun()
-
-        if has_dpr:
-            file_name = project_dpr.get("dpr_file_name") or "N/A"
-            updated_at = fmt_dt(project_dpr.get("updated_at"))
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # MODULE 2 â€” ESTIMATES
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    est_in_progress = sum(
+        1 for eg in project_groups
+        if str(eg.get("status") or "DRAFT").strip().upper() == "DRAFT"
+    )
+    est_completed = max(estimate_count - est_in_progress, 0)
+    est_hdr_left = st.container()
+    with est_hdr_left:
+        title_col, add_btn_col = st.columns([3, 2], gap="small")
+        with title_col:
             st.markdown(
-                f"<div style='font-size:12px;color:#6b7280;margin:4px 0 8px 0;'>DPR ready: <b>{esc_html(file_name)}</b> | Updated: {esc_html(updated_at)}</div>",
+                """
+                <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px 0;">
+                    <span style="font-size:16px;">&#128202;</span>
+                    <span style="font-family:'Crimson Pro',serif;font-size:18px;font-weight:700;color:var(--primary);">
+                        Module 2 &mdash; Estimates
+                    </span>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
-        else:
-            st.info("No DPR created for this fresh project yet.")
+        with add_btn_col:
+            if has_dpr:
+                add_estimate_href = (
+                    f'./?nav=CreateEstimate&project={quote(str(project_name))}&from_flow=project_detail'
+                )
+                st.markdown(
+                    (
+                        '<div style="margin:8px 0 0 0;">'
+                        f'<a href="{add_estimate_href}" target="_self" class="cta-link cta-sm">Add New Estimate</a>'
+                        '</div>'
+                    ),
+                    unsafe_allow_html=True,
+                )
+
+    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+
+    # DPR gate: estimates are only available after DPR exists.
+    if not has_dpr:
+        st.markdown(
+            """
+            <div style="background:var(--info-bg);border:1px solid var(--info-border);
+                        border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;color:var(--info-text);">
+                Create the DPR first to enable estimates for this project.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    elif not project_groups:
+        st.markdown(
+            """
+            <div class="empty-state" style="padding:30px 20px;">
+                <div class="empty-icon">&#128196;</div>
+                <p>No estimates yet</p>
+                <small>Click "Add New Estimate" above to create the first estimate for this project.</small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        # Build estimates table as pure HTML
+        est_rows = ""
+        for i, est in enumerate(project_groups):
+            est_no = est.get("estimate_number") or "-"
+            est_yr = est.get("year_of_estimate")
+            y_val = est_yr.year if hasattr(est_yr, "year") else est_yr
+            status = est.get("status", "DRAFT")
+            latest = fmt_dt(est.get("latest_date"))
+            contract_count = int(est.get("contract_count") or 0)
+            badge_cls = "badge-done" if status != "DRAFT" else "badge-pending"
+            badge_txt = "Completed" if status != "DRAFT" else "In Progress"
+            est_group_href = (
+                f'./?estimate_action=open_group&est_no={quote(str(est_no))}'
+                f'&est_yr={quote(str(est_yr))}&project_name={quote(str(project_name))}'
+            )
+            est_rows += (
+                f"<tr>"
+                f'<td class="td-sno">{i+1:02d}</td>'
+                f'<td class="td-name"><a href="{est_group_href}" target="_self">{esc_html(est_no)} ({y_val})</a></td>'
+                f'<td class="td-count">{contract_count}</td>'
+                f'<td><span class="status-badge {badge_cls}">{badge_txt}</span></td>'
+                f'<td style="font-size:12px;color:#64748B;">{esc_html(latest)}</td>'
+                f"</tr>"
+            )
+
+        est_table_html = (
+            '<table class="proj-table" style="margin-top:4px;">'
+            "<thead><tr>"
+            '<th style="width:48px;">Sr. No.</th>'
+            "<th>Estimate No. (Year)</th>"
+            '<th style="width:100px;text-align:center;">Contracts</th>'
+            '<th style="width:140px;">Status</th>'
+            '<th style="width:160px;">Last Updated</th>'
+            "</tr></thead>"
+            "<tbody>" + est_rows + "</tbody>"
+            "</table>"
+        )
+        st.markdown(est_table_html, unsafe_allow_html=True)
+
+
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # MODULE 3 â€” CONTRACTS (contextual)
+    # shown only when user navigates into an estimate
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    project_key = project_name.strip().lower()
+    all_project_contracts = []
+    for est in project_groups:
+        est_no = est.get("estimate_number")
+        est_yr = est.get("year_of_estimate")
+        if not est_no or est_yr in (None, ""):
+            continue
+
+        est_submissions = get_submissions_by_estimate(
+            est_no,
+            est_yr,
+            user_id=user_id,
+            module="contract_management",
+        )
+        est_submissions, _ = _split_contract_submissions(
+            est_submissions,
+            module_key="contract_management",
+        )
+
+        for sub in est_submissions:
+            sub_project = (sub.get("name_of_project") or "").strip().lower()
+            if sub_project and sub_project != project_key:
+                continue
+            entry = dict(sub)
+            entry["_est_no"] = est_no
+            entry["_est_yr"] = est_yr
+            all_project_contracts.append(entry)
+
+    all_project_contracts.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
+    draft_count = sum(1 for x in all_project_contracts if str(x.get("status") or "DRAFT").strip().upper() == "DRAFT")
+    completed_count = max(len(all_project_contracts) - draft_count, 0)
+
+    st.markdown(
+        f"""
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 0 8px 0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:16px;">&#128221;</span>
+                <span style="font-family:'Crimson Pro',serif;font-size:18px;font-weight:700;color:var(--primary);">
+                    Module 3 &mdash; Contracts
+                </span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if not all_project_contracts:
+        st.info("No contracts found across estimates for this project yet.")
+    else:
+        rows_html = ""
+        for i, s in enumerate(all_project_contracts, 1):
+            status = str(s.get("status") or "DRAFT").strip().upper()
+            badge_cls = "badge-pending" if status == "DRAFT" else "badge-done"
+            badge_txt = "DRAFT" if status == "DRAFT" else "COMPLETED"
+
+            status_note = ""
+            if status == "COMPLETED":
+                has_estimate_file = bool((s.get("estimate_attachment") or "").strip())
+                if has_estimate_file:
+                    status_note = '<div class="contract-status-note uploaded">Estimate Uploaded</div>'
+                else:
+                    status_note = '<div class="contract-status-note missing">Estimate Missing</div>'
+
+            rows_html += (
+                "<tr>"
+                f'<td class="td-sno">{i:02d}</td>'
+                f'<td class="td-id">{esc_html(s.get("id"))}</td>'
+                f'<td>{esc_html(s.get("created_by_user", "Unknown"))}</td>'
+                f'<td class="td-status"><span class="status-badge {badge_cls}">{badge_txt}</span>{status_note}</td>'
+                "</tr>"
+            )
+
+        table_html = (
+            '<table class="proj-table contract-list-table" style="margin-top:4px;">'
+            "<thead><tr>"
+            '<th style="width:56px;">S.No</th>'
+            '<th style="width:90px;">ID</th>'
+            "<th>User</th>"
+            '<th style="width:290px;">Status</th>'
+            "</tr></thead>"
+            f"<tbody>{rows_html}</tbody>"
+            "</table>"
+        )
+        st.markdown(table_html, unsafe_allow_html=True)
 
 
 def render_new_application_page(flow_data=None):
     flow_data = flow_data or {}
-    render_flow_header("Start New Project", back_key="back_new_app_top")
+    render_flow_header("Start New Project", back_key="back_new_app_top", align="center")
     project_placeholder = "-- Select Project --"
     created_projects_key = "created_projects_store"
 
@@ -1960,12 +2529,14 @@ def render_new_application_page(flow_data=None):
     elif st.session_state.get(selected_module_key) not in module_options:
         st.session_state[selected_module_key] = module_options[0]
 
-    st.markdown("Select a module below to begin a new audit application.")
+    # Match the "Select Project" section styling (heading + dropdown with collapsed label).
+    st.markdown("#### Select Module")
     selected_m = st.selectbox(
         "Select Module",
         options=module_options,
         format_func=lambda x: module_display_map[x],
         key=selected_module_key,
+        label_visibility="collapsed",
     )
 
     if selected_m != "contract_management":
@@ -2019,6 +2590,7 @@ def render_new_application_page(flow_data=None):
         options=project_options,
         key="new_app_project_name",
         help="Select an existing project name from the list.",
+        label_visibility="collapsed",
     )
     if st.button("Select Project", key="btn_create_project", use_container_width=True, type="primary"):
         selected_project = (st.session_state.get("new_app_project_name") or "").strip()
@@ -2195,6 +2767,7 @@ elif st.query_params.get("nav") == "Logout":
     cookies.save()
     st.session_state.logged_in = False
     st.session_state.user_id   = None
+    st.session_state.nav_back_stack = []
     st.query_params.clear()
     st.rerun()
 elif st.query_params.get("nav") == "NewApp":
@@ -2205,6 +2778,10 @@ elif st.query_params.get("nav") == "NewApp":
 elif st.query_params.get("nav") == "CreateEstimate":
     if not is_admin:
         active_project = ""
+        source_flow = st.query_params.get("from_flow")
+        if isinstance(source_flow, list):
+            source_flow = source_flow[0] if source_flow else ""
+        source_flow = str(source_flow or "").strip().lower()
         requested_project = st.query_params.get("project")
         if isinstance(requested_project, list):
             requested_project = requested_project[0] if requested_project else ""
@@ -2217,11 +2794,71 @@ elif st.query_params.get("nav") == "CreateEstimate":
             active_project = (st.session_state.get("current_project_name") or "").strip()
         if active_project:
             st.session_state.current_project_name = active_project
+            if source_flow == "project_detail" and not st.session_state.get("flow_page"):
+                st.session_state.flow_page = "project_detail"
+                st.session_state.flow_data = {
+                    "project_name": active_project,
+                    "module": "contract_management",
+                }
+                st.session_state.flow_history = list(st.session_state.get("flow_history", []) or [])
             open_flow_page(
                 "create_estimate",
                 data={"project_name": active_project, "module": "contract_management"},
                 push_history=True,
             )
+    st.query_params.clear()
+    st.rerun()
+elif st.query_params.get("dpr_action"):
+    if not is_admin:
+        action = st.query_params.get("dpr_action")
+        if isinstance(action, list):
+            action = action[0] if action else ""
+        action = str(action or "").strip().lower()
+
+        project_name = st.query_params.get("project")
+        if isinstance(project_name, list):
+            project_name = project_name[0] if project_name else ""
+        project_name = str(project_name or "").strip()
+
+        source_flow = st.query_params.get("from_flow")
+        if isinstance(source_flow, list):
+            source_flow = source_flow[0] if source_flow else ""
+        source_flow = str(source_flow or "").strip().lower()
+
+        if project_name:
+            st.session_state.current_project_name = project_name
+
+            # When coming from a rendered "summary" area (no active flow_page),
+            # seed the originating page so "Back" returns to the immediate previous view.
+            if source_flow in ("project_detail", "dpr_view") and not st.session_state.get("flow_page"):
+                st.session_state.flow_page = source_flow
+                st.session_state.flow_data = {
+                    "project_name": project_name,
+                    "module": "contract_management",
+                }
+                st.session_state.flow_history = list(st.session_state.get("flow_history", []) or [])
+
+            if action == "edit":
+                open_flow_page(
+                    "create_dpr",
+                    data={"project_name": project_name, "module": "contract_management"},
+                    push_history=True,
+                )
+            elif action == "view":
+                open_flow_page(
+                    "dpr_view",
+                    data={"project_name": project_name, "module": "contract_management"},
+                    push_history=True,
+                )
+    st.query_params.clear()
+    st.rerun()
+elif st.query_params.get("flow_action"):
+    action = st.query_params.get("flow_action")
+    if isinstance(action, list):
+        action = action[0] if action else ""
+    if str(action or "").strip().lower() == "back":
+        st.session_state.pop("show_up_id", None)
+        back_flow_page()
     st.query_params.clear()
     st.rerun()
 elif st.query_params.get("estimate_action"):
@@ -2286,7 +2923,20 @@ elif st.query_params.get("contract_action"):
         st.session_state.initial_estimate_number = est_no
         st.session_state.initial_year_of_estimate = est_yr
         prefill_project = ""
-        submissions_for_prefill = get_submissions_by_estimate(est_no, est_yr, user_id=None, module=None)
+        resume_master_id = None
+        submissions_for_prefill = get_submissions_by_estimate(
+            est_no,
+            est_yr,
+            user_id=user_id,
+            module="contract_management",
+        )
+        _, placeholder_submissions = _split_contract_submissions(
+            submissions_for_prefill,
+            module_key="contract_management",
+        )
+        if placeholder_submissions:
+            placeholder_submissions.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
+            resume_master_id = _to_int_id(placeholder_submissions[0].get("id"))
         if submissions_for_prefill:
             for sub in submissions_for_prefill:
                 if sub.get("name_of_project"):
@@ -2302,7 +2952,7 @@ elif st.query_params.get("contract_action"):
         st.session_state.initial_estimate_number = saved_no
         st.session_state.initial_year_of_estimate = saved_yr
         st.session_state.initial_name_of_project = saved_nm
-        st.session_state.master_id = None
+        st.session_state.master_id = resume_master_id
         st.session_state.current_view = "contract_management"
         remember_flow_return_for_module()
         close_flow_page()
@@ -2436,15 +3086,18 @@ if not is_admin:
 
         username_display = esc_html(st.session_state.username or "Officer")
         st.markdown(f"""
-        <div class="welcome-hero">
-            <div style="font-size:11px; font-weight:700; color:#9ca3af; letter-spacing:1.1px;
-                        text-transform:uppercase; margin-bottom:8px;">
-                Irrigation Department - Uttar Pradesh
-            </div>
-            <h1>Welcome, {username_display}</h1>
-            <p>Contract Management Portal - manage your submissions from this central portal.</p>
-        </div>
+          <div class="welcome-hero">
+              <div class="welcome-dept-badge">&#127981;&nbsp; Irrigation Department &mdash; Uttar Pradesh</div>
+              <h1>Welcome, {username_display}</h1>
+              <p>This is the <strong>Irrigation Data Management Portal</strong> for the Irrigation Department,
+              Government of Uttar Pradesh, in association with the
+              <strong>Comptroller and Auditor General of India</strong> &mdash; Irrigation Audit Wing.</p>
+              <p class="sub">All audit submissions, project DPRs, estimates and contract records are managed
+              centrally through this secure portal. Data entered here is subject to CAG audit review.</p>
+          </div>
         """, unsafe_allow_html=True)
+
+        render_flash_message()
 
         draft_summaries = get_user_draft_summaries(user_id)
 
@@ -2592,62 +3245,52 @@ if not is_admin:
             if selected_filter not in {"DPR", "ESTIMATES", "PROJECTS", "CONTRACTS"}:
                 selected_filter = "DPR"
 
-            def _mini_card(title, value, filter_key):
-                is_selected = selected_filter == filter_key
-                border = "#1a3a6b" if is_selected else "#e5e8ef"
-                bg = "#f8f9fc" if is_selected else "#fff"
+            # Pure HTML metrics grid â€” rendered as a single st.markdown block
+            def _make_metric_card(title, started, finished, filter_key):
+                is_active = selected_filter == filter_key
+                active_cls = "active" if is_active else ""
                 return (
-                    f'<a href="./?mini_filter={filter_key}" target="_self" '
-                    f'style="text-decoration:none; display:block;">'
-                    f'<div style="padding:10px 12px;border:1px solid {border}; border-radius:8px; background:{bg};">'
-                    f'<div style="font-size:11px;color:#6b7280;font-weight:700;">{esc_html(title)}</div>'
-                    f'<div style="font-size:20px;color:#1a3a6b;font-weight:800;">{esc_html(value)}</div>'
-                    f'</div></a>'
+                    f'<a href="./?mini_filter={filter_key}" target="_self" class="metric-card {active_cls}">'
+                    f'<div class="metric-card-top-bar"></div>'
+                    f'<div class="metric-card-label">{esc_html(title)}</div>'
+                    f'<div class="metric-card-nums">'
+                    f'<div class="metric-num-block">'
+                    f'<div class="metric-big-num">{started}</div>'
+                    f'<div class="metric-num-label">Started</div>'
+                    f'</div>'
+                    f'<div class="metric-sep">/</div>'
+                    f'<div class="metric-num-block">'
+                    f'<div class="metric-big-num finished">{finished}</div>'
+                    f'<div class="metric-num-label">Finished</div>'
+                    f'</div>'
+                    f'</div>'
+                    f'</a>'
                 )
 
-            m1, m2, m3, m4 = st.columns(4)
-            with m1:
-                st.markdown(
-                    _mini_card(
-                        "DPR finished",
-                        f'{mini_stats["dpr_completed"]}/{mini_stats["dpr_incomplete"]}',
-                        "DPR",
-                    ),
-                    unsafe_allow_html=True,
-                )
-            with m2:
-                st.markdown(
-                    _mini_card(
-                        "Estimates finished",
-                        f'{mini_stats["estimates_completed"]}/{mini_stats["estimates_incomplete"]}',
-                        "ESTIMATES",
-                    ),
-                    unsafe_allow_html=True,
-                )
-            with m3:
-                st.markdown(
-                    _mini_card(
-                        "Projects",
-                        f'{mini_stats["projects_completed"]}/{mini_stats["projects_incomplete"]}',
-                        "PROJECTS",
-                    ),
-                    unsafe_allow_html=True,
-                )
-            with m4:
-                st.markdown(
-                    _mini_card(
-                        "Contracts",
-                        f'{mini_stats["contracts_completed"]}/{mini_stats["contracts_incomplete"]}',
-                        "CONTRACTS",
-                    ),
-                    unsafe_allow_html=True,
-                )
+            c1 = _make_metric_card("Projects",
+                mini_stats["projects_incomplete"] + mini_stats["projects_completed"],
+                mini_stats["projects_completed"], "PROJECTS")
+            c2 = _make_metric_card("DPRs",
+                mini_stats["dpr_incomplete"] + mini_stats["dpr_completed"],
+                mini_stats["dpr_completed"], "DPR")
+            c3 = _make_metric_card("Estimates",
+                mini_stats["estimates_incomplete"] + mini_stats["estimates_completed"],
+                mini_stats["estimates_completed"], "ESTIMATES")
+            c4 = _make_metric_card("Contracts",
+                mini_stats["contracts_incomplete"] + mini_stats["contracts_completed"],
+                mini_stats["contracts_completed"], "CONTRACTS")
+
+            st.markdown(
+                f'<div class="metrics-grid">{c1}{c2}{c3}{c4}</div>',
+                unsafe_allow_html=True
+            )
 
             st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
         st.markdown("""
-        <div class="section-header">
-            <h3>Your Projects</h3>
+        <div class="section-hdr">
+            <span class="section-hdr-text">Your Projects</span>
+            <div class="section-hdr-line"></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -2706,59 +3349,23 @@ if not is_admin:
                     )
                 )
 
-            filter_label = {
-                "DPR": "All Projects",
-                "ESTIMATES": "Projects With Estimates",
-                "PROJECTS": "Project Completion View",
-                "CONTRACTS": "Projects With Contracts",
-            }.get(selected_filter, "All Projects")
-            st.markdown(
-                f"<div style='font-size:12px;color:#6b7280;margin:0 0 8px 0;'>View: <b>{esc_html(filter_label)}</b></div>",
-                unsafe_allow_html=True,
-            )
-
             if not filtered_dashboard_projects:
                 if dashboard_projects:
-                    st.info("No projects match the selected mini dashboard filter.")
+                    st.info("No projects match the selected filter.")
                 else:
-                    st.info("No projects created yet. Use Start New Project to add your first project.")
+                    st.markdown("""
+                    <div class="empty-state">
+                        <div class="empty-icon">&#128203;</div>
+                        <p>No projects yet</p>
+                        <small>Click "Start New Project" in the top navigation to add your first project.</small>
+                    </div>""", unsafe_allow_html=True)
             else:
                 paged_projects, start_idx, total_pages = paginate_list(
                     filtered_dashboard_projects, "dashboard_projects_page", render_controls=False
                 )
 
-                h1, h2, h3, h4, h5 = st.columns([0.6, 3.8, 1.6, 2.0, 1.2])
-                h1.markdown("**S.No**")
-                h2.markdown("**Project Name**")
-                if selected_filter == "CONTRACTS":
-                    h3.markdown("**Contracts (C/I)**")
-                    h4.markdown("**Contract Status**")
-                elif selected_filter == "ESTIMATES":
-                    h3.markdown("**Estimates (C/I)**")
-                    h4.markdown("**Estimate Status**")
-                elif selected_filter == "PROJECTS":
-                    h3.markdown("**Estimates**")
-                    h4.markdown("**Project Status**")
-                else:
-                    h3.markdown("**Estimates**")
-                    h4.markdown("**DPR Status**")
-                with h5:
-                    st.markdown('<div class="rows-per-page" style="margin-bottom:0;text-align:right;">Rows</div>', unsafe_allow_html=True)
-                    size_key = "dashboard_projects_page_size"
-                    new_size = st.selectbox(
-                        "Size",
-                        [10, 25, 50, 100],
-                        index=[10, 25, 50, 100].index(st.session_state.get(size_key, 10)),
-                        key="size_select_dashboard_projects_inline",
-                        label_visibility="collapsed",
-                    )
-                    if new_size != st.session_state.get(size_key, 10):
-                        st.session_state[size_key] = new_size
-                        st.session_state.dashboard_projects_page = 1
-                        st.rerun()
-
-                st.markdown("<hr style='margin:4px 0; border-color:#e5e8ef;'>", unsafe_allow_html=True)
-
+                # Build pure HTML table â€” zero st.columns(), all concatenated strings
+                rows_html = ""
                 for i, proj in enumerate(paged_projects):
                     project_name = proj.get("project_name", "")
                     estimate_count = int(proj.get("estimate_count") or 0)
@@ -2767,98 +3374,55 @@ if not is_admin:
                     project_key = " ".join((project_name or "").split()).lower()
                     est_counts = estimate_summary_map.get(project_key, {"completed": 0, "incomplete": 0})
                     contract_counts = contract_summary_map.get(project_key, {"completed": 0, "incomplete": 0})
-                    project_status = project_status_map.get(project_key, "Incomplete")
                     s_no = start_idx + i + 1
 
-                    r1, r2, r3, r4 = st.columns([0.6, 3.8, 1.6, 2.0])
-                    r1.write(str(s_no))
-                    with r2:
-                        project_href = f'./?dash_project={quote(str(project_name))}'
-                        st.markdown(
-                            f'<a href="{project_href}" target="_self" class="dashboard-project-link">{esc_html(project_name)}</a>',
-                            unsafe_allow_html=True,
+                    project_href = f'./?dash_project={quote(str(project_name))}'
+
+                    if has_dpr:
+                        view_dpr_href = f'./?dash_action=view_dpr&dash_project={quote(str(project_name))}'
+                        dpr_cell = (
+                            f'<span class="status-badge badge-done">&#10003; Available</span>'
+                            f'<a href="{view_dpr_href}" target="_self" class="tbl-action-link">View &rarr;</a>'
                         )
-                    if selected_filter == "CONTRACTS":
-                        r3.write(f'{contract_counts["completed"]}/{contract_counts["incomplete"]}')
-                    elif selected_filter == "ESTIMATES":
-                        r3.write(f'{est_counts["completed"]}/{est_counts["incomplete"]}')
                     else:
-                        r3.write(str(estimate_count))
+                        fill_dpr_href = f'./?dash_action=fill_dpr&dash_project={quote(str(project_name))}'
+                        dpr_cell = (
+                            f'<span class="status-badge badge-pending">&#9675; Pending</span>'
+                            f'<a href="{fill_dpr_href}" target="_self" class="tbl-action-link">Fill &rarr;</a>'
+                        )
 
-                    if selected_filter == "PROJECTS":
-                        with r4:
-                            if project_status == "Completed":
-                                st.markdown(
-                                    '<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; '
-                                    'padding:2px 10px; border-radius:4px; font-size:11px; font-weight:700;">Completed</span>',
-                                    unsafe_allow_html=True,
-                                )
-                            else:
-                                st.markdown(
-                                    '<span style="background:#fffbeb; color:#92400e; border:1px solid #fcd34d; '
-                                    'padding:2px 10px; border-radius:4px; font-size:11px; font-weight:700;">Incomplete</span>',
-                                    unsafe_allow_html=True,
-                                )
-                    elif selected_filter == "CONTRACTS":
-                        with r4:
-                            if contract_counts["incomplete"] == 0 and (contract_counts["completed"] > 0):
-                                st.markdown(
-                                    '<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; '
-                                    'padding:2px 10px; border-radius:4px; font-size:11px; font-weight:700;">Completed</span>',
-                                    unsafe_allow_html=True,
-                                )
-                            else:
-                                st.markdown(
-                                    '<span style="background:#fffbeb; color:#92400e; border:1px solid #fcd34d; '
-                                    'padding:2px 10px; border-radius:4px; font-size:11px; font-weight:700;">Incomplete</span>',
-                                    unsafe_allow_html=True,
-                                )
-                    elif selected_filter == "ESTIMATES":
-                        with r4:
-                            if est_counts["incomplete"] == 0 and (est_counts["completed"] > 0):
-                                st.markdown(
-                                    '<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; '
-                                    'padding:2px 10px; border-radius:4px; font-size:11px; font-weight:700;">Completed</span>',
-                                    unsafe_allow_html=True,
-                                )
-                            else:
-                                st.markdown(
-                                    '<span style="background:#fffbeb; color:#92400e; border:1px solid #fcd34d; '
-                                    'padding:2px 10px; border-radius:4px; font-size:11px; font-weight:700;">Incomplete</span>',
-                                    unsafe_allow_html=True,
-                                )
-                    elif has_dpr:
-                        with r4:
-                            dpr_status_col, dpr_action_col = st.columns([1.0, 1.35])
-                            with dpr_status_col:
-                                st.markdown(
-                                    '<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; '
-                                    'padding:2px 8px; border-radius:4px; font-size:10.5px; font-weight:700;">Available</span>',
-                                    unsafe_allow_html=True,
-                                )
-                            with dpr_action_col:
-                                view_dpr_href = f'./?dash_action=view_dpr&dash_project={quote(str(project_name))}'
-                                st.markdown(
-                                    f'<a href="{view_dpr_href}" target="_self" class="dashboard-project-link">View DPR</a>',
-                                    unsafe_allow_html=True,
-                                )
-                    else:
-                        with r4:
-                            dpr_status_col, dpr_action_col = st.columns([1.0, 1.35])
-                            with dpr_status_col:
-                                st.markdown(
-                                    '<span style="background:#fffbeb; color:#92400e; border:1px solid #fcd34d; '
-                                    'padding:2px 8px; border-radius:4px; font-size:10.5px; font-weight:700;">Pending</span>',
-                                    unsafe_allow_html=True,
-                                )
-                            with dpr_action_col:
-                                fill_dpr_href = f'./?dash_action=fill_dpr&dash_project={quote(str(project_name))}'
-                                st.markdown(
-                                    f'<a href="{fill_dpr_href}" target="_self" class="dashboard-project-link">Fill DPR</a>',
-                                    unsafe_allow_html=True,
-                                )
+                    est_done = est_counts["completed"]
+                    est_total = est_counts["completed"] + est_counts["incomplete"]
+                    est_cell = f'{est_done} / {est_total}' if est_total > 0 else str(estimate_count)
 
-                    st.markdown("<hr style='margin:6px 0; border:0; border-top:1px solid #f3f4f6;'>", unsafe_allow_html=True)
+                    con_done = contract_counts["completed"]
+                    con_total = contract_counts["completed"] + contract_counts["incomplete"]
+                    con_cell = f'{con_done} / {con_total}'
+
+                    rows_html += (
+                        f'<tr>'
+                        f'<td class="td-sno">{s_no:02d}</td>'
+                        f'<td class="td-name"><a href="{project_href}" target="_self">{esc_html(project_name)}</a></td>'
+                        f'<td class="td-status">{dpr_cell}</td>'
+                        f'<td class="td-count">{est_cell}</td>'
+                        f'<td class="td-count">{con_cell}</td>'
+                        f'</tr>'
+                    )
+
+                th_est = '<th style="width:120px;text-align:center;">Estimates<br><span style="font-size:8.5px;opacity:0.6;font-weight:400;text-transform:none;letter-spacing:0;">done / total</span></th>'
+                th_con = '<th style="width:120px;text-align:center;">Contracts<br><span style="font-size:8.5px;opacity:0.6;font-weight:400;text-transform:none;letter-spacing:0;">done / total</span></th>'
+                table_html = (
+                    '<table class="proj-table">'
+                    '<thead><tr>'
+                    '<th style="width:52px;">#</th>'
+                    '<th>Project Name</th>'
+                    '<th style="width:200px;">DPR Status</th>'
+                    + th_est + th_con +
+                    '</tr></thead>'
+                    '<tbody>' + rows_html + '</tbody>'
+                    '</table>'
+                )
+                st.markdown(table_html, unsafe_allow_html=True)
 
                 render_pagination_footer("dashboard_projects_page", total_pages)
 
@@ -2896,20 +3460,17 @@ if not is_admin:
 
     back_col, _ = st.columns([1.3, 6])
     with back_col:
-        if st.button("<- Back", key=f"back_module_{module_name}", use_container_width=True):
-            if restore_module_return_flow():
-                st.rerun()
-            st.session_state.current_view = "Main"
-            st.rerun()
-
+        render_back_link(f"back_module_{module_name}")
     # --- Module header ---
     st.markdown(f"""
     <div style="margin-bottom:20px;">
-        <div style="font-size:11px; font-weight:700; color:#9ca3af; letter-spacing:1px;
-                    text-transform:uppercase; margin-bottom:6px;">
-            Module
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+            <span style="font-size:11px; font-weight:700; color:#9ca3af; letter-spacing:1px;
+                         text-transform:uppercase; line-height:1;">Module</span>
+            <span style="font-size:22px; font-weight:800; color:#1a3a6b; line-height:1;">
+                {selected_module}
+            </span>
         </div>
-        <h2 style="margin:0; font-size:22px; font-weight:800; color:#1a3a6b;">{selected_module}</h2>
         <p style="margin:4px 0 0; color:#6b7280; font-size:13.5px;">
             Fill in all sections below to complete your audit application.
         </p>
@@ -2931,6 +3492,9 @@ if not is_admin:
     </div>
     """, unsafe_allow_html=True)
 
+    # Show one-time success/error messages after actions that rerun the page (e.g., Save Section).
+    render_flash_message()
+
     if percentage == 100:
         st.markdown("""
         <div class="completion-banner">
@@ -2940,13 +3504,28 @@ if not is_admin:
         """, unsafe_allow_html=True)
 
     # --- Tabs ---
-    tab_labels = []
+    st.markdown('<div class="module-form-tabs-trigger"></div>', unsafe_allow_html=True)
+    tab_label_by_table = {}
+    green_dot = "\U0001F7E2"
+    yellow_dot = "\U0001F7E1"
     for table in tables:
         section_name = table.replace(prefix, "").replace("_", " ").title()
-        is_complete  = is_section_complete(user_id, table, master_id=st.session_state.master_id)
-        tab_labels.append(f"🟢 {section_name}" if is_complete else f"🟡 {section_name}")
+        is_complete = is_section_complete(user_id, table, master_id=st.session_state.master_id)
+        tab_label_by_table[table] = f"{green_dot} {section_name}" if is_complete else f"{yellow_dot} {section_name}"
 
-    tabs = st.tabs(tab_labels)
+    active_tab_key = f"active_module_table_{module_name}"
+    if active_tab_key not in st.session_state or st.session_state.get(active_tab_key) not in tables:
+        st.session_state[active_tab_key] = tables[0]
+
+    active_table = st.radio(
+        "Section",
+        options=tables,
+        key=active_tab_key,
+        format_func=lambda t: tab_label_by_table.get(t, str(t)),
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+    section_container = st.container()
 
     first_table      = tables[0]
     first_table_draft = get_user_draft(first_table, user_id, master_id=st.session_state.master_id)
@@ -2978,7 +3557,9 @@ if not is_admin:
         name_of_project  = st.session_state.get("initial_name_of_project")
 
     for i, table in enumerate(tables):
-        with tabs[i]:
+        if table != active_table:
+            continue
+        with section_container:
             is_master_form = (table == first_table)
             columns        = get_table_columns(table, is_admin=False)
 
@@ -2997,36 +3578,62 @@ if not is_admin:
                 </div>
                 """, unsafe_allow_html=True)
 
-            # Initialize session state once
-            if f"{table}_initialized" not in st.session_state:
-                draft = get_user_draft(table, user_id, master_id=st.session_state.master_id)
+            # Initialize session state (rehydrate if Streamlit prunes widget state when switching sections)
+            init_key = f"{table}_initialized"
+            needs_init = init_key not in st.session_state
+            if not needs_init:
+                # When a section isn't rendered, Streamlit can drop widget-backed keys from session_state.
+                # If that happens, reload the saved draft so values show again when returning.
                 for col_info in columns:
-                    col   = col_info["column_name"]
+                    col = col_info["column_name"]
+                    base_key = f"{table}_{col}"
+                    if base_key not in st.session_state:
+                        needs_init = True
+                        break
+
+            if needs_init:
+                st.session_state.pop(init_key, None)
+                cached_tables = st.session_state.get("unsaved_table_cache", {}) or {}
+                cached_row = cached_tables.get(table) if isinstance(cached_tables, dict) else None
+                draft = cached_row if isinstance(cached_row, dict) else get_user_draft(
+                    table, user_id, master_id=st.session_state.master_id
+                )
+                for col_info in columns:
+                    col = col_info["column_name"]
                     dtype = col_info["data_type"]
-                    key   = f"{table}_{col}"
+                    key = f"{table}_{col}"
                     use_date_picker = is_date_picker_field(col, dtype)
+
                     if draft and col in draft and draft[col] is not None:
                         val = draft[col]
                         if use_date_picker:
                             val = parse_date_for_input(val)
-                        elif dtype in ("integer","bigint","smallint"):
-                            try: val = int(val)
-                            except (TypeError, ValueError): val = 0
-                        elif dtype in ("numeric","double precision","real"):
-                            try: val = float(val)
-                            except (TypeError, ValueError): val = 0.0
+                        elif dtype in ("integer", "bigint", "smallint"):
+                            try:
+                                val = int(val)
+                            except (TypeError, ValueError):
+                                val = 0
+                        elif dtype in ("numeric", "double precision", "real"):
+                            try:
+                                val = float(val)
+                            except (TypeError, ValueError):
+                                val = 0.0
                         elif dtype == "date":
-                            if isinstance(val, datetime.datetime): val = val.date()
+                            if isinstance(val, datetime.datetime):
+                                val = val.date()
                             elif isinstance(val, str):
-                                try: val = datetime.date.fromisoformat(val[:10])
-                                except (TypeError, ValueError): val = None
+                                try:
+                                    val = datetime.date.fromisoformat(val[:10])
+                                except (TypeError, ValueError):
+                                    val = None
                             if col == "year_of_estimate" and val:
-                                val = val.year if hasattr(val,'year') else val
+                                val = val.year if hasattr(val, "year") else val
                         else:
                             val = str(val)
+
                         if col == "year_of_estimate" and "-" in str(val) and len(str(val)) > 7:
                             try:
-                                y   = int(str(val).split("-")[0])
+                                y = int(str(val).split("-")[0])
                                 val = f"{y}-{str(y+1)[2:]}"
                             except (TypeError, ValueError):
                                 pass
@@ -3034,14 +3641,15 @@ if not is_admin:
                     else:
                         if use_date_picker:
                             st.session_state.setdefault(key, None)
-                        elif dtype in ("integer","bigint","smallint"):
+                        elif dtype in ("integer", "bigint", "smallint"):
                             st.session_state.setdefault(key, 0)
-                        elif dtype in ("numeric","double precision","real"):
+                        elif dtype in ("numeric", "double precision", "real"):
                             st.session_state.setdefault(key, 0.0)
                         elif dtype == "date":
                             st.session_state.setdefault(key, None)
                         else:
                             st.session_state.setdefault(key, "")
+
                         if is_master_form and not draft:
                             if col == "estimate_number" and estimate_number:
                                 st.session_state[key] = str(estimate_number)
@@ -3049,76 +3657,92 @@ if not is_admin:
                                 st.session_state[key] = year_of_estimate
                             elif col == "name_of_project" and name_of_project:
                                 st.session_state[key] = str(name_of_project)
-                st.session_state[f"{table}_initialized"] = True
+
+                st.session_state[init_key] = True
 
             form_data    = {}
             filled_fields = 0
 
-            # ---- FIRST TAB: inside st.form ----
+            # ---- FIRST TAB: live widgets (no st.form) ----
+            # Using st.form here caused unsaved inputs to be discarded when switching sections.
             if table == first_table:
-                with st.form(f"form_{table}"):
-                    col1, col2 = st.columns(2)
-                    filled_fields = 0
-                    for index, col_info in enumerate(columns):
-                        col   = col_info["column_name"]
-                        if col in ["estimate_number","year_of_estimate","name_of_project"] and module_name != "contract_management":
-                            continue
-                        dtype = col_info["data_type"]
-                        key   = f"{table}_{col}"
-                        use_date_picker = is_date_picker_field(col, dtype)
-                        target_col = col1 if index % 2 == 0 else col2
-                        with target_col:
-                            label = col.replace("_"," ").title()
-                            if any(w in col.lower() for w in money_keywords):
-                                label = f"{label} (INR)"
-                            is_disabled = (module_name == "contract_management" and
-                                           col in ["estimate_number","year_of_estimate","name_of_project"])
-                            if dtype in ("integer","bigint","smallint"):
-                                value = st.number_input(label, step=1, key=key, disabled=is_disabled)
-                            elif dtype in ("numeric","double precision","real"):
-                                value = st.number_input(label, key=key, disabled=is_disabled)
-                            elif use_date_picker:
-                                value = st.date_input(label, key=key, disabled=is_disabled)
-                            elif dtype == "date":
-                                if col == "year_of_estimate":
-                                    cy = datetime.datetime.now().year
-                                    yo = [f"{y}-{str(y+1)[2:]}" for y in range(cy,1999,-1)]
-                                    value = st.selectbox(label, options=yo, key=key, disabled=is_disabled)
-                                else:
-                                    value = st.date_input(label, key=key, disabled=is_disabled)
-                            elif dtype in ("boolean","bool"):
-                                bool_options = ["","Yes","No"]
-                                curr_val = st.session_state.get(key)
-                                idx = 0
-                                if curr_val is True  or str(curr_val).lower()=="true":  idx = 1
-                                if curr_val is False or str(curr_val).lower()=="false": idx = 2
-                                sel = st.selectbox(label, options=bool_options, index=idx,
-                                                   key=f"{key}_select", disabled=is_disabled)
-                                value = True if sel=="Yes" else (False if sel=="No" else None)
+                col1, col2 = st.columns(2)
+                filled_fields = 0
+                for index, col_info in enumerate(columns):
+                    col = col_info["column_name"]
+                    if col in ["estimate_number", "year_of_estimate", "name_of_project"] and module_name != "contract_management":
+                        continue
+                    dtype = col_info["data_type"]
+                    key = f"{table}_{col}"
+                    use_date_picker = is_date_picker_field(col, dtype)
+                    target_col = col1 if index % 2 == 0 else col2
+                    with target_col:
+                        label = col.replace("_", " ").title()
+                        if any(w in col.lower() for w in money_keywords):
+                            label = f"{label} (INR)"
+                        is_disabled = (
+                            module_name == "contract_management"
+                            and col in ["estimate_number", "year_of_estimate", "name_of_project"]
+                        )
+                        if dtype in ("integer", "bigint", "smallint"):
+                            value = st.number_input(label, step=1, key=key, disabled=is_disabled)
+                        elif dtype in ("numeric", "double precision", "real"):
+                            value = st.number_input(label, key=key, disabled=is_disabled)
+                        elif use_date_picker:
+                            value = st.date_input(label, key=key, disabled=is_disabled)
+                        elif dtype == "date":
+                            if col == "year_of_estimate":
+                                cy = datetime.datetime.now().year
+                                yo = [f"{y}-{str(y+1)[2:]}" for y in range(cy, 1999, -1)]
+                                value = st.selectbox(label, options=yo, key=key, disabled=is_disabled)
                             else:
-                                value = st.text_input(label, key=key, disabled=is_disabled)
-                        form_data[col] = value
-                        if col not in ["estimate_number","year_of_estimate","name_of_project"] \
-                                and value not in ("",None,0,0.0):
-                            filled_fields += 1
+                                value = st.date_input(label, key=key, disabled=is_disabled)
+                        elif dtype in ("boolean", "bool"):
+                            bool_options = ["", "Yes", "No"]
+                            curr_val = st.session_state.get(key)
+                            idx = 0
+                            if curr_val is True or str(curr_val).lower() == "true":
+                                idx = 1
+                            if curr_val is False or str(curr_val).lower() == "false":
+                                idx = 2
+                            sel = st.selectbox(
+                                label,
+                                options=bool_options,
+                                index=idx,
+                                key=f"{key}_select",
+                                disabled=is_disabled,
+                            )
+                            value = True if sel == "Yes" else (False if sel == "No" else None)
+                        else:
+                            value = st.text_input(label, key=key, disabled=is_disabled)
 
-                    submitted = st.form_submit_button("Save Section", use_container_width=True, type="primary")
+                    form_data[col] = value
+                    if col not in ["estimate_number", "year_of_estimate", "name_of_project"] and value not in ("", None, 0, 0.0):
+                        filled_fields += 1
 
-                if submitted:
+                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+                if st.button("Save Section", key=f"save_{table}", use_container_width=True, type="primary"):
+                    if not can_edit:
+                        st.warning("This application has been submitted and cannot be edited.")
+                        st.stop()
+
                     for col_info in columns:
                         if col_info["is_nullable"] == "NO":
                             col_name = col_info["column_name"]
-                            val      = form_data.get(col_name)
-                            if val in (None,"",0,0.0):
-                                st.error(f"{col_name.replace('_',' ').title()} is required.")
+                            val = form_data.get(col_name)
+                            if val in (None, "", 0, 0.0):
+                                st.error(f"{col_name.replace('_', ' ').title()} is required.")
                                 st.stop()
+
                     if filled_fields == 0:
                         st.warning("Please fill in at least one field before saving.")
                         st.stop()
+
                     if module_name == "contract_management":
-                        for req_col in ["estimate_number","year_of_estimate","name_of_project"]:
-                            if req_col in form_data and form_data.get(req_col) in (None,"",0,0.0):
-                                st.error(f"{req_col.replace('_',' ').title()} is required.")
+                        for req_col in ["estimate_number", "year_of_estimate", "name_of_project"]:
+                            if req_col in form_data and form_data.get(req_col) in (None, "", 0, 0.0):
+                                st.error(f"{req_col.replace('_', ' ').title()} is required.")
                                 st.stop()
 
                     form_data = serialize_date_fields_as_text(form_data, columns)
@@ -3127,9 +3751,13 @@ if not is_admin:
                     if target_master_id is None:
                         try:
                             target_master_id = create_master_submission(
-                                user_id, module_name, tables, status='DRAFT',
+                                user_id,
+                                module_name,
+                                tables,
+                                status="DRAFT",
                                 estimate_number=estimate_number,
-                                year_of_estimate=year_of_estimate)
+                                year_of_estimate=year_of_estimate,
+                            )
                         except ValueError as ve:
                             st.error(f"**Duplicate Application Found:** {str(ve)}")
                             st.stop()
@@ -3140,12 +3768,15 @@ if not is_admin:
                     try:
                         save_draft_record(table, form_data, user_id, master_id=target_master_id)
                         if table == tables[0]:
-                            update_master_submission(target_master_id,
+                            update_master_submission(
+                                target_master_id,
                                 estimate_number=form_data.get("estimate_number"),
                                 year_of_estimate=form_data.get("year_of_estimate"),
-                                name_of_project=form_data.get("name_of_project"))
+                                name_of_project=form_data.get("name_of_project"),
+                            )
                         st.session_state.master_id = target_master_id
-                        st.success("Section saved successfully!")
+                        section_label = table.replace(prefix, "").replace("_", " ").title()
+                        set_flash_message("success", f"{section_label} saved successfully!")
                         st.toast("Application saved to drafts.")
                         st.rerun()
                     except Exception as e:
@@ -3154,103 +3785,125 @@ if not is_admin:
 
             # ---- OTHER TABS ----
             else:
-                col1, col2 = st.columns(2)
-                for index, col_info in enumerate(columns):
-                    col   = col_info["column_name"]
-                    dtype = col_info["data_type"]
-                    key   = f"{table}_{col}"
-                    use_date_picker = is_date_picker_field(col, dtype)
-                    target_col = col1 if index % 2 == 0 else col2
-                    with target_col:
-                        label = col.replace("_"," ").title()
-                        if any(w in col.lower() for w in money_keywords):
-                            label = f"{label} (INR)"
-                        if col in ["estimate_number","year_of_estimate","name_of_project"]:
-                            value = (estimate_number if col=="estimate_number"
-                                     else (name_of_project if col=="name_of_project"
-                                           else year_of_estimate))
-                            display_key = f"display_{table}_{col}"
-                            st.session_state[display_key] = str(value) if value is not None else ""
-                            st.text_input(label, disabled=True, key=display_key)
-                            form_data[col] = value
-                            continue
-                        if dtype in ("integer","bigint","smallint"):
-                            value = st.number_input(label, step=1, key=key)
-                        elif dtype in ("numeric","double precision","real"):
-                            value = st.number_input(label, key=key)
-                        elif use_date_picker:
-                            value = st.date_input(label, key=key)
-                        elif dtype == "date":
-                            if col == "year_of_estimate":
-                                cy = datetime.datetime.now().year
-                                yo = list(range(cy, 1999, -1))
-                                value = st.selectbox(label, options=yo, key=key)
-                            else:
-                                value = st.date_input(label, key=key)
-                        elif dtype in ("boolean","bool"):
-                            bool_options = ["","Yes","No"]
-                            curr_val = st.session_state.get(key)
-                            idx = 0
-                            if curr_val is True  or str(curr_val).lower()=="true":  idx = 1
-                            if curr_val is False or str(curr_val).lower()=="false": idx = 2
-                            sel = st.selectbox(label, options=bool_options, index=idx, key=f"{key}_select")
-                            value = True if sel=="Yes" else (False if sel=="No" else None)
-                        else:
-                            value = st.text_input(label, key=key)
+                  col1, col2 = st.columns(2)
+                  for index, col_info in enumerate(columns):
+                      col = col_info["column_name"]
+                      dtype = col_info["data_type"]
+                      key = f"{table}_{col}"
+                      use_date_picker = is_date_picker_field(col, dtype)
+                      target_col = col1 if index % 2 == 0 else col2
+                      with target_col:
+                          label = col.replace("_", " ").title()
+                          if any(w in col.lower() for w in money_keywords):
+                              label = f"{label} (INR)"
+                          if col in ["estimate_number", "year_of_estimate", "name_of_project"]:
+                              value = (
+                                  estimate_number
+                                  if col == "estimate_number"
+                                  else (name_of_project if col == "name_of_project" else year_of_estimate)
+                              )
+                              display_key = f"display_{table}_{col}"
+                              st.session_state[display_key] = str(value) if value is not None else ""
+                              st.text_input(label, disabled=True, key=display_key)
+                              form_data[col] = value
+                              continue
+                          if dtype in ("integer", "bigint", "smallint"):
+                              value = st.number_input(label, step=1, key=key)
+                          elif dtype in ("numeric", "double precision", "real"):
+                              value = st.number_input(label, key=key)
+                          elif use_date_picker:
+                              value = st.date_input(label, key=key)
+                          elif dtype == "date":
+                              if col == "year_of_estimate":
+                                  cy = datetime.datetime.now().year
+                                  yo = list(range(cy, 1999, -1))
+                                  value = st.selectbox(label, options=yo, key=key)
+                              else:
+                                  value = st.date_input(label, key=key)
+                          elif dtype in ("boolean", "bool"):
+                              bool_options = ["", "Yes", "No"]
+                              curr_val = st.session_state.get(key)
+                              idx = 0
+                              if curr_val is True or str(curr_val).lower() == "true":
+                                  idx = 1
+                              if curr_val is False or str(curr_val).lower() == "false":
+                                  idx = 2
+                              sel = st.selectbox(label, options=bool_options, index=idx, key=f"{key}_select")
+                              value = True if sel == "Yes" else (False if sel == "No" else None)
+                          else:
+                              value = st.text_input(label, key=key)
 
-                    form_data[col] = value
-                    if col == "year_of_estimate" and isinstance(value, int):
-                        form_data[col] = datetime.date(value, 1, 1)
-                    if col not in ["estimate_number","year_of_estimate"] and value not in ("",None,0,0.0):
-                        filled_fields += 1
+                      form_data[col] = value
+                      if col == "year_of_estimate" and isinstance(value, int):
+                          form_data[col] = datetime.date(value, 1, 1)
+                      if col not in ["estimate_number", "year_of_estimate"] and value not in ("", None, 0, 0.0):
+                          filled_fields += 1
 
-                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                  st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-                if st.button("Save Section", key=f"save_{table}", use_container_width=True, type="primary"):
-                    if not first_table_draft:
-                        st.warning("Please complete the first section before saving this one.")
-                        st.stop()
-                    if not can_edit:
-                        st.warning("This application has been submitted and cannot be edited.")
-                    elif filled_fields == 0:
-                        st.warning("Please fill in at least one field before saving.")
-                    else:
-                        table_col_names = [c["column_name"] for c in columns]
-                        if "estimate_number"  in table_col_names: form_data["estimate_number"]  = estimate_number
-                        if "year_of_estimate" in table_col_names: form_data["year_of_estimate"] = year_of_estimate
-                        if "name_of_project"  in table_col_names: form_data["name_of_project"]  = name_of_project
+                  if st.button("Save Section", key=f"save_{table}", use_container_width=True, type="primary"):
+                      if not first_table_draft:
+                          st.warning("Please complete the first section before saving this one.")
+                          st.stop()
+                      if not can_edit:
+                          st.warning("This application has been submitted and cannot be edited.")
+                          st.stop()
+                      if filled_fields == 0:
+                          st.warning("Please fill in at least one field before saving.")
+                          st.stop()
 
-                        form_data = serialize_date_fields_as_text(form_data, columns)
+                      table_col_names = [c["column_name"] for c in columns]
+                      if "estimate_number" in table_col_names:
+                          form_data["estimate_number"] = estimate_number
+                      if "year_of_estimate" in table_col_names:
+                          form_data["year_of_estimate"] = year_of_estimate
+                      if "name_of_project" in table_col_names:
+                          form_data["name_of_project"] = name_of_project
 
-                        target_master_id = st.session_state.master_id
-                        if target_master_id is None:
-                            try:
-                                target_master_id = create_master_submission(
-                                    user_id, module_name, tables, status='DRAFT',
-                                    estimate_number=estimate_number,
-                                    year_of_estimate=year_of_estimate)
-                            except Exception as e:
-                                err = str(e).lower()
-                                if "unique_estimate" in err or "duplicate key" in err:
-                                    st.error(f"An application with Estimate **{estimate_number}** already exists.")
-                                else:
-                                    report_error("Failed to create application.", e, "app.save_other_section.create")
-                                st.stop()
+                      form_data = serialize_date_fields_as_text(form_data, columns)
 
-                        try:
-                            save_draft_record(table, form_data, user_id, master_id=target_master_id)
-                            if table == tables[0]:
-                                update_master_submission(target_master_id,
-                                    estimate_number=form_data.get("estimate_number"),
-                                    year_of_estimate=form_data.get("year_of_estimate"),
-                                    name_of_project=form_data.get("name_of_project"))
-                            st.session_state.master_id = target_master_id
-                            st.success("Section saved successfully!")
-                            st.toast("Application saved to drafts.")
-                            st.rerun()
-                        except Exception as e:
-                            report_error("Failed to save section.", e, "app.save_other_section")
-                            st.stop()
+                      target_master_id = st.session_state.master_id
+                      if target_master_id is None:
+                          try:
+                              target_master_id = create_master_submission(
+                                  user_id,
+                                  module_name,
+                                  tables,
+                                  status="DRAFT",
+                                  estimate_number=estimate_number,
+                                  year_of_estimate=year_of_estimate,
+                              )
+                          except Exception as e:
+                              err = str(e).lower()
+                              if "unique_estimate" in err or "duplicate key" in err:
+                                  st.error(f"An application with Estimate **{estimate_number}** already exists.")
+                              else:
+                                  report_error("Failed to create application.", e, "app.save_other_section.create")
+                              st.stop()
+
+                      try:
+                          save_draft_record(table, form_data, user_id, master_id=target_master_id)
+                          if table == tables[0]:
+                              update_master_submission(
+                                  target_master_id,
+                                  estimate_number=form_data.get("estimate_number"),
+                                  year_of_estimate=form_data.get("year_of_estimate"),
+                                  name_of_project=form_data.get("name_of_project"),
+                              )
+                          st.session_state.master_id = target_master_id
+                          section_label = table.replace(prefix, "").replace("_", " ").title()
+                          set_flash_message("success", f"{section_label} saved successfully!")
+                          st.toast("Application saved to drafts.")
+                          st.rerun()
+                      except Exception as e:
+                          report_error("Failed to save section.", e, "app.save_other_section")
+                          st.stop()
+
+            # Cache current inputs so switching sections doesn't wipe unsaved values.
+            cached_tables = st.session_state.setdefault("unsaved_table_cache", {})
+            if isinstance(cached_tables, dict):
+                cached_tables[table] = dict(form_data)
+                st.session_state["unsaved_table_cache"] = cached_tables
 
     # =========================================================
     # ================== FINAL SUBMIT =========================
@@ -3262,28 +3915,7 @@ if not is_admin:
     else:
         incomplete_sections = tables
 
-    if master_id_active:
-        st.markdown("""
-        <div class="submit-cta">
-            <h3> Ready to Submit Your Application?</h3>
-            <p>Once all sections are complete, submit your full application for review.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
-    if incomplete_sections:
-        st.warning("Some sections are still incomplete. You can upload attachments now and continue filling sections.")
-        for idx, sec in enumerate(incomplete_sections, 1):
-            clean_name = sec.replace(prefix, "").replace("_", " ").title()
-            st.markdown(f"&nbsp;&nbsp;&nbsp;**{idx}.** {clean_name}")
-
-    st.markdown("""
-    <div class="submit-cta" style="background:#fffbeb; border-top-color:#d97706;">
-        <h3 style="color:#92400e;">Required Attachments</h3>
-        <p>Upload the mandatory documents below.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
     if not master_id_active:
         st.info("Save at least one section once to initialize the application, then upload files here.")
@@ -3294,10 +3926,19 @@ if not is_admin:
 
         def clean(s): return "".join([c if c.isalnum() or c in ('-', '_') else '_' for c in str(s)])
 
-        if existing_est:
-            st.success(f"Estimate Uploaded: `{os.path.basename(existing_est)}`")
-        est_file = st.file_uploader("Upload Estimate",
-            type=['pdf','docx','xlsx','jpg','png'], key="uploader_estimate")
+        st.markdown(
+            "<div class='compact-upload-title'>Estimate File Upload</div>",
+            unsafe_allow_html=True,
+        )
+        upload_col, _ = st.columns([1.25, 2.75])
+        with upload_col:
+            if existing_est:
+                st.caption(f"On record: {os.path.basename(existing_est)}")
+            est_file = st.file_uploader(
+                "Upload Estimate",
+                type=['pdf', 'doc', 'docx', 'xlsx', 'xls', 'jpg', 'jpeg', 'png'],
+                key="uploader_estimate",
+            )
         if est_file:
             fid = f"{est_file.name}_{est_file.size}"
             if st.session_state.get("last_est_id") != fid:
@@ -3320,7 +3961,22 @@ if not is_admin:
                 st.session_state["last_est_id"] = fid
                 st.rerun()
 
-        st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="submit-cta">
+            <h3> Ready to Submit Your Application?</h3>
+            <p>Once all sections are complete, submit your full application for review.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if incomplete_sections:
+            st.warning("Some sections are still incomplete. You can upload attachments now and continue filling sections.")
+            for idx, sec in enumerate(incomplete_sections, 1):
+                clean_name = sec.replace(prefix, "").replace("_", " ").title()
+                st.markdown(f"&nbsp;&nbsp;&nbsp;**{idx}.** {clean_name}")
+
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
         sections_pending = len(incomplete_sections)
         sections_total = len(tables)
         sections_completed = max(sections_total - sections_pending, 0)
@@ -3350,8 +4006,12 @@ if not is_admin:
             success = update_master_status(st.session_state.master_id, 'COMPLETED')
             if success:
                 set_drafts_to_final(st.session_state.master_id, tables)
-                st.balloons()
-                st.success("Application Submitted Successfully!")
+                submitted_master_id = st.session_state.master_id
+                # Persist message across redirect to dashboard.
+                if module_name == "contract_management":
+                    set_flash_message("success", f"Contract submitted successfully. Reference ID: {submitted_master_id}")
+                else:
+                    set_flash_message("success", f"Application submitted successfully. Reference ID: {submitted_master_id}")
                 st.session_state.master_id = None
                 st.session_state.current_view = "Main"
                 st.rerun()
@@ -3658,3 +4318,4 @@ if is_admin:
                         unsafe_allow_html=True)
 
 render_footer()
+
