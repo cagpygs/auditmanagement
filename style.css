@@ -1354,6 +1354,11 @@ body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label {
     transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease, color 0.12s ease;
 }
 
+/* Streamlit/BaseWeb renders a separate radio glyph container inside each label. Hide it. */
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
+    display: none !important;
+}
+
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label:hover {
     background: rgba(255, 255, 255, 0.70) !important;
     border-color: rgba(51, 73, 120, 0.14) !important;
@@ -1366,10 +1371,10 @@ body:has(.module-form-tabs-trigger) [data-testid="stRadio"] input {
 
 /* Active tab: rely on :has to detect checked input inside the label. */
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label:has(input:checked) {
-    background: linear-gradient(180deg, rgba(26, 58, 107, 0.95) 0%, rgba(26, 58, 107, 0.86) 100%) !important;
-    border-color: rgba(26, 58, 107, 0.45) !important;
-    box-shadow: 0 10px 18px rgba(26, 58, 107, 0.22);
-    color: #ffffff !important;
+    background: linear-gradient(180deg, #dff0ff 0%, #c9e6ff 100%) !important;
+    border-color: rgba(58, 124, 191, 0.45) !important;
+    box-shadow: 0 8px 16px rgba(58, 124, 191, 0.20);
+    color: #133a66 !important;
 }
 
 /* Tighten vertical spacing around the selector. */
