@@ -1,4 +1,3 @@
-import psycopg2
 import datetime
 import pandas as pd
 import streamlit as st
@@ -174,6 +173,18 @@ def release_connection(conn):
         get_db_pool().putconn(conn)
 
 
+def _rollback_db(conn):
+    if conn:
+        conn.rollback()
+
+
+def _cleanup_db(conn, cur=None):
+    if cur:
+        cur.close()
+    if conn:
+        release_connection(conn)
+
+
 # ================= LOAD TABLES =================
 
 def get_all_tables(conn=None):
@@ -208,36 +219,6 @@ def get_all_tables(conn=None):
         return []
     finally:
         if close_conn and conn:
-            release_connection(conn)
-
-
-# ================= GET NEXT CYCLE =================
-def get_next_cycle(user_id, module):
-    conn = None
-    cur = None
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            SELECT COALESCE(MAX(cycle), 0)
-            FROM master_submission
-            WHERE user_id=%s
-            AND module=%s
-        """,
-            (user_id, module),
-        )
-
-        last_cycle = cur.fetchone()[0]
-        return last_cycle + 1
-    except Exception as e:
-        report_error("Error getting next cycle.", e, "crud.get_next_cycle")
-        return 1
-    finally:
-        if cur:
-            cur.close()
-        if conn:
             release_connection(conn)
 
 
@@ -344,14 +325,10 @@ def save_draft_record(table, data, user_id, master_id=None):
 
         conn.commit()
     except Exception as e:
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
         raise e
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def update_master_attachments(master_id, estimate_path=None, sar_path=None):
@@ -385,14 +362,10 @@ def update_master_attachments(master_id, estimate_path=None, sar_path=None):
         return True
     except Exception as e:
         report_error("Error updating attachments.", e, "crud.update_master_attachments")
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
         return False
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def update_master_submission(master_id, estimate_number=None, year_of_estimate=None, name_of_project=None):
@@ -430,14 +403,10 @@ def update_master_submission(master_id, estimate_number=None, year_of_estimate=N
         return True
     except Exception as e:
         report_error("Error updating master metadata.", e, "crud.update_master_submission")
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
         return False
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 # ================= CREATE MASTER SUBMISSION =================
@@ -513,14 +482,10 @@ def create_master_submission(user_id, module, tables, status='COMPLETED', estima
         conn.commit()
         return master_id
     except Exception as e:
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
         raise e
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 # ================= UPDATE MASTER STATUS =================
@@ -539,14 +504,10 @@ def update_master_status(master_id, status):
         return True
     except Exception as e:
         report_error("Error updating master status.", e, "crud.update_master_status")
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
         return False
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 # ================= GET USER MASTER SUBMISSIONS =================
@@ -585,10 +546,7 @@ def get_user_master_submissions(user_id, module):
         report_error("Error getting user submissions.", e, "crud.get_user_master_submissions")
         return []
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def get_user_master_submissions_admin(user_id):
@@ -614,10 +572,7 @@ def get_user_master_submissions_admin(user_id):
         report_error("Error getting admin submissions.", e, "crud.get_user_master_submissions_admin")
         return []
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 
@@ -673,10 +628,7 @@ def get_submissions_by_estimate(est_no, est_yr, user_id=None, module=None, name_
         return []
 
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def _normalize_project_key(project_name):
@@ -921,14 +873,10 @@ def ensure_contract_quality_table_schema():
         return True
     except Exception as e:
         report_error("Error ensuring quality table schema.", e, "crud.ensure_contract_quality_table_schema")
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
         return False
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def get_master_ids_with_table_data(master_ids, tables):
@@ -984,10 +932,7 @@ def get_master_ids_with_table_data(master_ids, tables):
         )
         return set()
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def ensure_project_dpr_table():
@@ -1150,14 +1095,10 @@ def ensure_project_dpr_table():
         return True
     except Exception as e:
         report_error("Error ensuring project_dpr table.", e, "crud.ensure_project_dpr_table")
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
         return False
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def get_project_dpr(user_id, project_name, module="contract_management"):
@@ -1195,10 +1136,7 @@ def get_project_dpr(user_id, project_name, module="contract_management"):
         report_error("Error fetching project DPR.", e, "crud.get_project_dpr")
         return None
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def upsert_project_dpr(
@@ -1403,14 +1341,10 @@ def upsert_project_dpr(
         return True
     except Exception as e:
         report_error("Error saving project DPR.", e, "crud.upsert_project_dpr")
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
         return False
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def get_master_submission(master_id):
@@ -1434,10 +1368,7 @@ def get_master_submission(master_id):
         report_error("Error getting master submission.", e, "crud.get_master_submission")
         return None
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 # ================= GET FULL SUBMISSION DATA =================
@@ -1467,10 +1398,7 @@ def get_full_submission_data(master_id):
     except Exception as e:
         report_error("Error getting full submission data.", e, "crud.get_full_submission_data")
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
     return full_data
 
 
@@ -1504,10 +1432,7 @@ def get_full_draft_data(user_id, module_tables):
     except Exception as e:
         report_error("Error getting full draft data.", e, "crud.get_full_draft_data")
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
     return full_data
 
 
@@ -1550,10 +1475,7 @@ def get_user_progress(user_id, tables, master_id=None):
         report_error("Error calculating user progress.", e, "crud.get_user_progress")
         return 0, 0, total
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
     percentage = (completed / total) * 100 if total > 0 else 0
     return percentage, completed, total
@@ -1578,13 +1500,9 @@ def set_drafts_to_final(master_id, tables):
         conn.commit()
     except Exception as e:
         report_error("Error finalizing drafts.", e, "crud.set_drafts_to_final")
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 # ================= INCOMPLETE SECTIONS =================
@@ -1626,10 +1544,7 @@ def get_incomplete_forms(user_id, tables, master_id=None):
     except Exception as e:
         report_error("Error getting incomplete forms.", e, "crud.get_incomplete_forms")
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
             
     return incomplete
 
@@ -1664,10 +1579,7 @@ def get_user_draft_summaries(user_id):
         report_error("Error getting draft summaries.", e, "crud.get_user_draft_summaries")
         return []
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 # ================= STATUS COUNTS =================
@@ -1701,10 +1613,7 @@ def get_user_master_status_counts(user_id, all_modules=None):
     except Exception as e:
         report_error("Error getting master status counts.", e, "crud.get_user_master_status_counts")
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
     # Return only submitted and drafts
     return submitted, drafts
@@ -1729,13 +1638,9 @@ def delete_unattached_drafts(user_id, tables):
         conn.commit()
     except Exception as e:
         report_error("Error deleting unattached drafts.", e, "crud.delete_unattached_drafts")
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def export_master_submission_pdf(master_id):
@@ -1887,10 +1792,7 @@ def export_master_submission_pdf(master_id):
     except Exception as e:
         report_error("Error exporting PDF.", e, "crud.export_master_submission_pdf")
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
     buffer.seek(0)
     return buffer
@@ -1943,10 +1845,7 @@ def get_table_columns(table, is_admin=False):
         report_error("Error getting table columns.", e, "crud.get_table_columns")
         return []
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 def get_user_draft(table, user_id, master_id=None):
@@ -1990,10 +1889,7 @@ def get_user_draft(table, user_id, master_id=None):
         report_error("Error getting user draft.", e, "crud.get_user_draft")
         return None
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 
 
@@ -2035,10 +1931,7 @@ def get_master_status(master_id):
         report_error("Error getting master status.", e, "crud.get_master_status")
         return None
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 def create_user(username, password, role="operator", allowed_modules=""):
     """
     Creates a new user. Returns (True, "Success message") or (False, "Error message").
@@ -2073,12 +1966,11 @@ def create_user(username, password, role="operator", allowed_modules=""):
         return True, f"User '{username}' created successfully!"
 
     except Exception as e:
-        conn.rollback()
+        _rollback_db(conn)
         report_error("Error creating user.", e, "crud.create_user")
         return False, "Database error while creating user."
     finally:
-        cur.close()
-        release_connection(conn)
+        _cleanup_db(conn, cur)
 
 def get_all_users_admin():
     conn = None
@@ -2090,8 +1982,7 @@ def get_all_users_admin():
         report_error("Error getting users list.", e, "crud.get_all_users_admin")
         return pd.DataFrame(columns=["id", "username", "role", "is_active"])
     finally:
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn)
 
 def get_user_by_id(uid):
     """
@@ -2117,10 +2008,7 @@ def get_user_by_id(uid):
         report_error("Error fetching user.", e, "crud.get_user_by_id")
         return None
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 def toggle_user_status(user_id, current_status):
     conn = None
@@ -2133,13 +2021,9 @@ def toggle_user_status(user_id, current_status):
         conn.commit()
     except Exception as e:
         report_error("Error toggling user status.", e, "crud.toggle_user_status")
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
 
 def update_user_modules(user_id, modules_list):
     """
@@ -2155,10 +2039,6 @@ def update_user_modules(user_id, modules_list):
         conn.commit()
     except Exception as e:
         report_error("Error updating user modules.", e, "crud.update_user_modules")
-        if conn:
-            conn.rollback()
+        _rollback_db(conn)
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            release_connection(conn)
+        _cleanup_db(conn, cur)
