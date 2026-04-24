@@ -151,6 +151,7 @@ def load_css(file_name):
             st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 load_css('style.css')
+load_css('iidms_override.css')
 
 
 # =====================================================
@@ -366,33 +367,100 @@ if show_create_estimate_link:
         nav_links_html += f'<a href="{create_estimate_href}" target="_self" class="nav-item-minimal">Create Estimate</a>'
 
 # =====================================================
-# ================= TOP NAVIGATION BAR ================
+# ================= SIDEBAR + TOP HEADER (IIDMS) ======
 # =====================================================
 username_value = st.session_state.get("username") or "User"
 username_initial = username_value[0].upper() if username_value else "U"
 
+_cv = st.session_state.get("current_view", "Main")
+_nav_active   = lambda key: "sidebar-nav-item sidebar-nav-active" if _cv == key else "sidebar-nav-item"
+_main_active  = "sidebar-nav-item sidebar-nav-active" if _cv in ("Main",) else "sidebar-nav-item"
+
+_ic_dashboard = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'
+_ic_projects  = '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v4c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 9v4c0 1.66 4.03 3 9 3s9-1.34 9-3V9"/><path d="M3 13v4c0 1.66 4.03 3 9 3s9-1.34 9-3v-4"/></svg>'
+_ic_analysis  = '<svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>'
+_ic_about     = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-width="2.5"/><path d="M12 12v6"/></svg>'
+_ic_redflags  = '<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2.5"/></svg>'
+
+with st.sidebar:
+    st.markdown(f'''
+    <div class="sidebar-brand">
+        <div class="sidebar-logo-icon">{LOGO_SMALL}</div>
+        <div class="sidebar-brand-text">
+            <div class="sidebar-brand-title">IIDMS</div>
+            <div class="sidebar-brand-sub">DATA PORTAL</div>
+        </div>
+    </div>
+    <a href="./?nav=Dashboard" target="_self" class="{_nav_active("Dashboard")}"><span class="sidebar-nav-icon">{_ic_dashboard}</span> Dashboard</a>
+    <a href="./?nav=Main" target="_self" class="{_main_active}"><span class="sidebar-nav-icon">{_ic_projects}</span> Projects</a>
+    <a href="./?nav=Main" target="_self" class="sidebar-nav-item"><span class="sidebar-nav-icon">{_ic_analysis}</span> Analysis</a>
+    <a href="./?nav=AboutDept" target="_self" class="{_nav_active("AboutDept")}"><span class="sidebar-nav-icon">{_ic_about}</span> About Department</a>
+    <div class="sidebar-section-label">SYSTEM UTILITIES</div>
+    <a href="#" target="_self" class="sidebar-nav-item"><span class="sidebar-nav-icon">{_ic_redflags}</span> Red Flags</a>
+    <div class="sidebar-user-card">
+        <div class="sidebar-user-avatar">{html.escape(str(username_initial))}</div>
+        <div class="sidebar-user-info">
+            <div class="sidebar-user-name">{html.escape(str(username_value))}</div>
+            <div class="sidebar-user-role">FIELD_USER</div>
+        </div>
+    </div>
+    <a href="./?nav=Logout" target="_self" class="sidebar-signout">Sign Out</a>
+    ''', unsafe_allow_html=True)
+
 nav_html = f"""
 <div id="sticky-header-container">
-    <div class="nav-brand">
-        {LOGO_SMALL}
-        <div class="nav-brand-text-wrap">
-            <div class="nav-brand-title">Irrigation Audit Management System</div>
-            <div class="nav-brand-sub">Comptroller &amp; Auditor General of India</div>
-        </div>
+    <div class="iidms-header-left">
+        <button id="sidebar-toggle-btn" class="sidebar-toggle" title="Toggle sidebar">
+            <span class="toggle-bar"></span>
+            <span class="toggle-bar"></span>
+            <span class="toggle-bar"></span>
+        </button>
+        <span class="iidms-gov-badge">GOVERNMENT OF UTTAR PRADESH</span>
+        <span class="iidms-gov-badge iidms-gov-badge-alt">CAG OF INDIA</span>
+        <span class="iidms-header-title">Irrigation Data Management System</span>
+        <span class="iidms-header-sub">GOVERNMENT RESOURCE</span>
     </div>
-    <div class="nav-links-left">{nav_links_html}</div>
     <div class="nav-right-actions">
-        <span class="nav-role-label">{html.escape(str(role_label))}</span>
-        <div class="user-pill">
-            <div class="avatar-mini">{html.escape(str(username_initial))}</div>
-            <div class="user-name-label">{html.escape(str(username_value))}</div>
+        <div class="iidms-search-box">
+            <span class="iidms-search-icon">🔍</span>
+            <span class="iidms-search-text">Search projects...</span>
         </div>
-        <a href="./?nav=Logout" target="_self" class="logout-link">Sign Out</a>
-    </div>
+        <span class="iidms-header-icon">🔔</span>
+        <span class="iidms-header-icon">⚙️</span>
+</div>
 </div>
 <div class="nav-spacer"></div>
 """
 st.markdown(nav_html, unsafe_allow_html=True)
+
+import streamlit.components.v1 as components
+components.html("""
+<script>
+(function() {
+    function initToggle() {
+        var btn = parent.document.getElementById('sidebar-toggle-btn');
+        if (!btn) { setTimeout(initToggle, 300); return; }
+        if (btn._toggleBound) return;
+        btn._toggleBound = true;
+        btn.addEventListener('click', function() {
+            var sidebar = parent.document.querySelector('[data-testid="stSidebar"]');
+            if (!sidebar) return;
+            var isHidden = sidebar.getAttribute('aria-expanded') === 'false';
+            if (isHidden) {
+                sidebar.setAttribute('aria-expanded', 'true');
+                sidebar.style.marginLeft = '0px';
+                sidebar.style.transition = 'margin-left 0.3s ease';
+            } else {
+                sidebar.setAttribute('aria-expanded', 'false');
+                sidebar.style.marginLeft = '-230px';
+                sidebar.style.transition = 'margin-left 0.3s ease';
+            }
+        });
+    }
+    initToggle();
+})();
+</script>
+""", height=0)
 
 
 # =====================================================
@@ -2227,10 +2295,6 @@ def render_project_detail_page(flow_data=None):
     project_name = (flow_data.get("project_name") or "").strip()
     safe_project = _safe_key(project_name or "project")
 
-    # Back button + breadcrumb in one clean line
-    back_col, _ = st.columns([1.5, 6])
-    with back_col:
-        render_back_link(f"back_project_detail_{safe_project}")
     if not project_name:
         st.warning("No project selected.")
         return
@@ -2246,196 +2310,14 @@ def render_project_detail_page(flow_data=None):
     # Count contracts across all estimates
     total_contracts = sum(int(eg.get("contract_count") or 0) for eg in project_groups)
 
-    # â”€â”€ Project Header â”€â”€
-    dpr_badge = '<span class="status-badge badge-done">&#10003; DPR Done</span>' if has_dpr else '<span class="status-badge badge-pending">&#9675; DPR Pending</span>'
-    st.markdown(f"""
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
-                padding:22px 28px;margin-bottom:20px;box-shadow:var(--shadow-xs);
-                border-left:4px solid var(--primary);">
-        <div style="font-size:10px;font-weight:700;color:var(--text-faint);text-transform:uppercase;
-                    letter-spacing:0.7px;margin-bottom:6px;">Project</div>
-        <div style="font-family:'Crimson Pro',serif;font-size:26px;font-weight:700;
-                    color:var(--primary);line-height:1.2;margin-bottom:10px;">{esc_html(project_name)}</div>
-        <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;">
-            {dpr_badge}
-            <span style="font-size:12.5px;color:var(--text-muted);">
-                <strong style="color:var(--text-body);">{estimate_count}</strong> Estimate{"s" if estimate_count != 1 else ""}
-            </span>
-            <span style="font-size:12.5px;color:var(--text-muted);">
-                <strong style="color:var(--text-body);">{total_contracts}</strong> Contract{"s" if total_contracts != 1 else ""}
-            </span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    # MODULE 1 â€” DPR
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    st.markdown(
-        f"""
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 0 8px 0;">
-            <div style="display:flex;align-items:center;gap:8px;">
-                <span style="font-size:16px;">&#128203;</span>
-                <span style="font-family:'Crimson Pro',serif;font-size:18px;font-weight:700;color:var(--primary);">
-                    Module 1 &mdash; Detailed Project Report (DPR)
-                </span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if has_dpr:
-        dpr_file = project_dpr.get("dpr_file_name") or "N/A"
-        dpr_updated = fmt_dt(project_dpr.get("updated_at"))
-        edit_dpr_href = f'./?dpr_action=edit&project={quote(str(project_name))}&from_flow=project_detail'
-        view_dpr_href = f'./?dpr_action=view&project={quote(str(project_name))}&from_flow=project_detail'
-        st.markdown(
-            f"""
-            <div style="background:var(--success-bg);border:1px solid var(--success-border);
-                        border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;">
-                <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                    <div>
-                        <div style="font-size:12px;font-weight:700;color:var(--success-text);">
-                            &#10003; DPR on Record
-                        </div>
-                        <div style="font-size:12px;color:var(--success);margin-top:3px;">
-                            File: <strong>{esc_html(dpr_file)}</strong> &nbsp;&mdash;&nbsp; Last updated: {esc_html(dpr_updated)}
-                        </div>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
-                        <a href="{edit_dpr_href}" target="_self" class="cta-link cta-sm">Update DPR</a>
-                        <a href="{view_dpr_href}" target="_self" class="cta-link cta-sm">View DPR Details</a>
-                    </div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        create_dpr_href = f'./?dpr_action=edit&project={quote(str(project_name))}&from_flow=project_detail'
-        st.markdown(
-            f"""
-            <div style="background:var(--info-bg);border:1px solid var(--info-border);
-                        border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                    <div style="font-size:13px;font-weight:600;color:var(--info-text);">
-                        No DPR has been created for this project yet.
-                    </div>
-                    <a href="{create_dpr_href}" target="_self" class="cta-link cta-sm">Create DPR</a>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    # MODULE 2 â€” ESTIMATES
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # Count completed estimates
     est_in_progress = sum(
         1 for eg in project_groups
         if str(eg.get("status") or "DRAFT").strip().upper() == "DRAFT"
     )
     est_completed = max(estimate_count - est_in_progress, 0)
-    est_hdr_left = st.container()
-    with est_hdr_left:
-        title_col, add_btn_col = st.columns([3, 2], gap="small")
-        with title_col:
-            st.markdown(
-                """
-                <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px 0;">
-                    <span style="font-size:16px;">&#128202;</span>
-                    <span style="font-family:'Crimson Pro',serif;font-size:18px;font-weight:700;color:var(--primary);">
-                        Module 2 &mdash; Estimates
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with add_btn_col:
-            if has_dpr:
-                add_estimate_href = (
-                    f'./?nav=CreateEstimate&project={quote(str(project_name))}&from_flow=project_detail'
-                )
-                st.markdown(
-                    (
-                        '<div style="margin:8px 0 0 0;">'
-                        f'<a href="{add_estimate_href}" target="_self" class="cta-link cta-sm">Add New Estimate</a>'
-                        '</div>'
-                    ),
-                    unsafe_allow_html=True,
-                )
 
-    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-
-    # DPR gate: estimates are only available after DPR exists.
-    if not has_dpr:
-        st.markdown(
-            """
-            <div style="background:var(--info-bg);border:1px solid var(--info-border);
-                        border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;color:var(--info-text);">
-                Create the DPR first to enable estimates for this project.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    elif not project_groups:
-        st.markdown(
-            """
-            <div class="empty-state" style="padding:30px 20px;">
-                <div class="empty-icon">&#128196;</div>
-                <p>No estimates yet</p>
-                <small>Click "Add New Estimate" above to create the first estimate for this project.</small>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        # Build estimates table as pure HTML
-        est_rows = ""
-        for i, est in enumerate(project_groups):
-            est_no = est.get("estimate_number") or "-"
-            est_yr = est.get("year_of_estimate")
-            y_val = est_yr.year if hasattr(est_yr, "year") else est_yr
-            status = est.get("status", "DRAFT")
-            latest = fmt_dt(est.get("latest_date"))
-            contract_count = int(est.get("contract_count") or 0)
-            badge_cls = "badge-done" if status != "DRAFT" else "badge-pending"
-            badge_txt = "Completed" if status != "DRAFT" else "In Progress"
-            est_group_href = (
-                f'./?estimate_action=open_group&est_no={quote(str(est_no))}'
-                f'&est_yr={quote(str(est_yr))}&project_name={quote(str(project_name))}'
-            )
-            est_rows += (
-                f"<tr>"
-                f'<td class="td-sno">{i+1:02d}</td>'
-                f'<td class="td-name"><a href="{est_group_href}" target="_self">{esc_html(est_no)} ({y_val})</a></td>'
-                f'<td class="td-count">{contract_count}</td>'
-                f'<td><span class="status-badge {badge_cls}">{badge_txt}</span></td>'
-                f'<td style="font-size:12px;color:#64748B;">{esc_html(latest)}</td>'
-                f"</tr>"
-            )
-
-        est_table_html = (
-            '<table class="proj-table" style="margin-top:4px;">'
-            "<thead><tr>"
-            '<th style="width:48px;">Sr. No.</th>'
-            "<th>Estimate No. (Year)</th>"
-            '<th style="width:100px;text-align:center;">Contracts</th>'
-            '<th style="width:140px;">Status</th>'
-            '<th style="width:160px;">Last Updated</th>'
-            "</tr></thead>"
-            "<tbody>" + est_rows + "</tbody>"
-            "</table>"
-        )
-        st.markdown(est_table_html, unsafe_allow_html=True)
-
-
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    # MODULE 3 â€” CONTRACTS (contextual)
-    # shown only when user navigates into an estimate
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # Gather all contracts for this project
     project_key = project_name.strip().lower()
     all_project_contracts = []
     for est in project_groups:
@@ -2443,18 +2325,12 @@ def render_project_detail_page(flow_data=None):
         est_yr = est.get("year_of_estimate")
         if not est_no or est_yr in (None, ""):
             continue
-
         est_submissions = get_submissions_by_estimate(
-            est_no,
-            est_yr,
-            user_id=user_id,
-            module="contract_management",
+            est_no, est_yr, user_id=user_id, module="contract_management",
         )
         est_submissions, _ = _split_contract_submissions(
-            est_submissions,
-            module_key="contract_management",
+            est_submissions, module_key="contract_management",
         )
-
         for sub in est_submissions:
             sub_project = (sub.get("name_of_project") or "").strip().lower()
             if sub_project and sub_project != project_key:
@@ -2468,59 +2344,305 @@ def render_project_detail_page(flow_data=None):
     draft_count = sum(1 for x in all_project_contracts if str(x.get("status") or "DRAFT").strip().upper() == "DRAFT")
     completed_count = max(len(all_project_contracts) - draft_count, 0)
 
-    st.markdown(
-        f"""
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 0 8px 0;">
-            <div style="display:flex;align-items:center;gap:8px;">
-                <span style="font-size:16px;">&#128221;</span>
-                <span style="font-family:'Crimson Pro',serif;font-size:18px;font-weight:700;color:var(--primary);">
-                    Module 3 &mdash; Contracts
-                </span>
+    # -- IIDMS Project Header --
+    back_href = "./?nav=Main"
+    st.markdown(f"""
+    <div class="iidms-project-header">
+        <div class="iidms-project-header-left">
+            <a href="{back_href}" target="_self" class="iidms-back-arrow">&larr;</a>
+            <div>
+                <div class="iidms-project-title">{esc_html(project_name)}</div>
+                <div class="iidms-project-subtitle">EXECUTING DIVISION: IRRIGATION</div>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    </div>
+    """, unsafe_allow_html=True)
 
-    if not all_project_contracts:
-        st.info("No contracts found across estimates for this project yet.")
-    else:
-        rows_html = ""
-        for i, s in enumerate(all_project_contracts, 1):
-            status = str(s.get("status") or "DRAFT").strip().upper()
-            badge_cls = "badge-pending" if status == "DRAFT" else "badge-done"
-            badge_txt = "DRAFT" if status == "DRAFT" else "COMPLETED"
+    # -- 4 Stat Cards --
+    st.markdown(f"""
+    <div class="iidms-stat-grid">
+        <div class="iidms-stat-card">
+            <div class="iidms-stat-label">TOTAL ESTIMATES</div>
+            <div class="iidms-stat-value">{estimate_count}</div>
+            <div class="iidms-stat-sub">Registered Estimates</div>
+        </div>
+        <div class="iidms-stat-card">
+            <div class="iidms-stat-label">DPR STATUS</div>
+            <div class="iidms-stat-value">{"&#10003;" if has_dpr else "&#10007;"}</div>
+            <div class="iidms-stat-sub">{"On Record" if has_dpr else "Pending"}</div>
+        </div>
+        <div class="iidms-stat-card">
+            <div class="iidms-stat-label">CONTRACTS</div>
+            <div class="iidms-stat-value">{total_contracts}</div>
+            <div class="iidms-stat-sub">Total Contracts</div>
+        </div>
+        <div class="iidms-stat-card">
+            <div class="iidms-stat-label">COMPLETED</div>
+            <div class="iidms-stat-value">{completed_count}</div>
+            <div class="iidms-stat-sub">Finished Contracts</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-            status_note = ""
-            if status == "COMPLETED":
-                has_estimate_file = bool((s.get("estimate_attachment") or "").strip())
-                if has_estimate_file:
-                    status_note = '<div class="contract-status-note uploaded">Estimate Uploaded</div>'
+    # -- Tabs: DPR Details | Estimates | Contracts --
+    tab_dpr, tab_est, tab_con = st.tabs(["DPR Details", "Estimates", "Contracts"])
+
+    # -- TAB 1: DPR Details --
+    with tab_dpr:
+        if has_dpr:
+            dpr_file = project_dpr.get("dpr_file_name") or "N/A"
+            dpr_updated = fmt_dt(project_dpr.get("updated_at"))
+            edit_dpr_href = f'./?dpr_action=edit&project={quote(str(project_name))}&from_flow=project_detail'
+
+            # Build inline DPR fields
+            existing_fields = get_existing_dpr_fields(project_dpr)
+            field_sections = []
+            current_section_name = "DPR Overview"
+            current_section_items = []
+            for cfg in get_dpr_field_configs():
+                label = cfg.get("label")
+                ftype = cfg.get("type")
+                if not label:
+                    continue
+                if ftype == "section":
+                    if current_section_items:
+                        field_sections.append((current_section_name, current_section_items))
+                    current_section_name = label
+                    current_section_items = []
+                    continue
+                raw_val = existing_fields.get(label)
+                if isinstance(raw_val, (list, tuple, set)):
+                    display_val = ", ".join([str(v) for v in raw_val if str(v).strip()]) or "N/A"
                 else:
-                    status_note = '<div class="contract-status-note missing">Estimate Missing</div>'
+                    display_val = str(raw_val).strip() if raw_val not in (None, "") else "N/A"
+                current_section_items.append((label, display_val))
+            if current_section_items:
+                field_sections.append((current_section_name, current_section_items))
 
-            rows_html += (
-                "<tr>"
-                f'<td class="td-sno">{i:02d}</td>'
-                f'<td class="td-id">{esc_html(s.get("id"))}</td>'
-                f'<td>{esc_html(s.get("created_by_user", "Unknown"))}</td>'
-                f'<td class="td-status"><span class="status-badge {badge_cls}">{badge_txt}</span>{status_note}</td>'
-                "</tr>"
+            total_fields  = sum(len(items) for _, items in field_sections)
+            filled_fields = sum(1 for _, items in field_sections for _, val in items if str(val).strip() and str(val).strip().upper() != "N/A")
+
+            docs = [
+                ("Upload Complete DPR",  "upload_complete_dpr_file_name"),
+                ("Investment clearence",  "investment_clearence_file_name"),
+                ("CWC clearence",         "cwc_clearence_file_name"),
+                ("DPR Approval by EFC",   "dpr_approval_by_efc_file_name"),
+                ("Survey Reports",        "survey_reports_file_name"),
+            ]
+            payload_raw = project_dpr.get("dpr_form_data")
+            payload = {}
+            if isinstance(payload_raw, dict):
+                payload = payload_raw
+            elif isinstance(payload_raw, str) and payload_raw.strip():
+                try:
+                    payload = json.loads(payload_raw) or {}
+                except (TypeError, ValueError):
+                    payload = {}
+
+            doc_rows = []
+            uploaded_docs = 0
+            for _lbl, _key in docs:
+                _doc = payload.get(_key) or project_dpr.get(_key)
+                if _key == "upload_complete_dpr_file_name" and not _doc:
+                    _doc = project_dpr.get("dpr_file_name")
+                _disp = str(_doc).strip() if _doc not in (None, "") else "N/A"
+                if _disp != "N/A":
+                    uploaded_docs += 1
+                doc_rows.append((_lbl, _disp))
+
+            # Header banner
+            st.markdown(
+                f"""
+                <div style="background:#ecfdf5;border:1px solid #bbf7d0;
+                            border-radius:10px;padding:16px 20px;margin:8px 0 16px 0;">
+                    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                        <div>
+                            <div style="font-size:13px;font-weight:700;color:#059669;">
+                                &#10003; DPR on Record
+                            </div>
+                            <div style="font-size:12px;color:#475569;margin-top:4px;">
+                                File: <strong>{esc_html(dpr_file)}</strong> &mdash; Last updated: {esc_html(dpr_updated)}
+                                &nbsp;&nbsp;
+                                <span style="color:#64748b;">Fields: {filled_fields}/{max(total_fields,1)}</span>
+                                &nbsp;|&nbsp;
+                                <span style="color:#64748b;">Documents: {uploaded_docs}/{len(docs)}</span>
+                            </div>
+                        </div>
+                        <a href="{edit_dpr_href}" target="_self" class="iidms-open-btn">Update DPR</a>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
 
-        table_html = (
-            '<table class="proj-table contract-list-table" style="margin-top:4px;">'
-            "<thead><tr>"
-            '<th style="width:56px;">S.No</th>'
-            '<th style="width:90px;">ID</th>'
-            "<th>User</th>"
-            '<th style="width:290px;">Status</th>'
-            "</tr></thead>"
-            f"<tbody>{rows_html}</tbody>"
-            "</table>"
-        )
-        st.markdown(table_html, unsafe_allow_html=True)
+            # Inline field section cards
+            def _dpr_row(lbl, val):
+                is_empty = str(val).strip().upper() == "N/A"
+                vc = "dpr-kv-val dpr-kv-empty" if is_empty else "dpr-kv-val"
+                return (
+                    f'<div class="dpr-kv-row">'
+                    f'<div class="dpr-kv-key">{esc_html(lbl)}</div>'
+                    f'<div class="{vc}">{esc_html(val)}</div>'
+                    f'</div>'
+                )
 
+            section_cards_html = ""
+            for section_name, items in field_sections:
+                sec_filled = sum(1 for _, v in items if str(v).strip() and str(v).strip().upper() != "N/A")
+                sec_total = len(items)
+                badge = f'<span class="dpr-sec-badge">{sec_filled}/{sec_total}</span>'
+                rows_html = "".join(_dpr_row(lbl, val) for lbl, val in items)
+                section_cards_html += (
+                    '<div class="dpr-section-card">'
+                    f'<div class="dpr-section-card-title">{esc_html(section_name)}{badge}</div>'
+                    f'<div class="dpr-kv-list">{rows_html}</div>'
+                    '</div>'
+                )
+
+            doc_rows_html = "".join(_dpr_row(lbl, val) for lbl, val in doc_rows)
+            docs_filled = sum(1 for _, v in doc_rows if str(v).strip() and str(v).strip().upper() != "N/A")
+            docs_badge = f'<span class="dpr-sec-badge">{docs_filled}/{len(doc_rows)}</span>'
+            docs_card_html = (
+                '<div class="dpr-section-card dpr-docs-card">'
+                f'<div class="dpr-section-card-title">DPR Documents{docs_badge}</div>'
+                f'<div class="dpr-kv-list dpr-docs-grid">{doc_rows_html}</div>'
+                '</div>'
+            )
+
+            st.markdown(
+                '<div class="dpr-view-body">'
+                f'<div class="dpr-sections-grid">{section_cards_html}</div>'
+                f'{docs_card_html}'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            create_dpr_href = f'./?dpr_action=edit&project={quote(str(project_name))}&from_flow=project_detail'
+            st.markdown(
+                f"""
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;
+                            border-radius:10px;padding:16px 20px;margin:8px 0;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                        <div style="font-size:13px;font-weight:600;color:#1e40af;">
+                            No DPR has been created for this project yet.
+                        </div>
+                        <a href="{create_dpr_href}" target="_self" class="registry-add-btn">+ Create DPR</a>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    # -- TAB 2: Estimates --
+    with tab_est:
+        if has_dpr:
+            add_estimate_href = (
+                f'./?nav=CreateEstimate&project={quote(str(project_name))}&from_flow=project_detail'
+            )
+            st.markdown(
+                f'<div style="text-align:right;margin:4px 0 8px 0;">'
+                f'<a href="{add_estimate_href}" target="_self" class="registry-add-btn">+ Add New Estimate</a>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        if not has_dpr:
+            st.markdown(
+                """
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;
+                            border-radius:10px;padding:14px 18px;color:#1e40af;font-size:13px;">
+                    Create the DPR first to enable estimates for this project.
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        elif not project_groups:
+            st.markdown("""
+            <div class="empty-state" style="padding:30px 20px;">
+                <div class="empty-icon">&#128196;</div>
+                <p>No estimates yet</p>
+                <small>Click "Add New Estimate" above to create the first estimate for this project.</small>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            est_rows = ""
+            for i, est in enumerate(project_groups):
+                est_no = est.get("estimate_number") or "-"
+                est_yr = est.get("year_of_estimate")
+                y_val = est_yr.year if hasattr(est_yr, "year") else est_yr
+                status = est.get("status", "DRAFT")
+                latest = fmt_dt(est.get("latest_date"))
+                contract_count = int(est.get("contract_count") or 0)
+                badge_cls = "badge-done" if status != "DRAFT" else "badge-pending"
+                badge_txt = "Completed" if status != "DRAFT" else "In Progress"
+                est_group_href = (
+                    f'./?estimate_action=open_group&est_no={quote(str(est_no))}'
+                    f'&est_yr={quote(str(est_yr))}&project_name={quote(str(project_name))}'
+                )
+                est_rows += (
+                    f"<tr>"
+                    f'<td class="td-sno">{i+1:02d}</td>'
+                    f'<td class="td-name"><a href="{est_group_href}" target="_self">{esc_html(est_no)} ({y_val})</a></td>'
+                    f'<td class="td-count">{contract_count}</td>'
+                    f'<td><span class="status-badge {badge_cls}">{badge_txt}</span></td>'
+                    f'<td style="font-size:12px;color:#64748B;">{esc_html(latest)}</td>'
+                    f"</tr>"
+                )
+
+            est_table_html = (
+                '<table class="proj-table" style="margin-top:4px;">'
+                "<thead><tr>"
+                '<th style="width:48px;">Sr. No.</th>'
+                "<th>Estimate No. (Year)</th>"
+                '<th style="width:100px;text-align:center;">Contracts</th>'
+                '<th style="width:140px;">Status</th>'
+                '<th style="width:160px;">Last Updated</th>'
+                "</tr></thead>"
+                "<tbody>" + est_rows + "</tbody>"
+                "</table>"
+            )
+            st.markdown(est_table_html, unsafe_allow_html=True)
+
+    # -- TAB 3: Contracts --
+    with tab_con:
+        if not all_project_contracts:
+            st.info("No contracts found across estimates for this project yet.")
+        else:
+            rows_html = ""
+            for i, s in enumerate(all_project_contracts, 1):
+                status = str(s.get("status") or "DRAFT").strip().upper()
+                badge_cls = "badge-pending" if status == "DRAFT" else "badge-done"
+                badge_txt = "DRAFT" if status == "DRAFT" else "COMPLETED"
+
+                status_note = ""
+                if status == "COMPLETED":
+                    has_estimate_file = bool((s.get("estimate_attachment") or "").strip())
+                    if has_estimate_file:
+                        status_note = '<div class="contract-status-note uploaded">Estimate Uploaded</div>'
+                    else:
+                        status_note = '<div class="contract-status-note missing">Estimate Missing</div>'
+
+                rows_html += (
+                    "<tr>"
+                    f'<td class="td-sno">{i:02d}</td>'
+                    f'<td class="td-id">{esc_html(s.get("id"))}</td>'
+                    f'<td>{esc_html(s.get("created_by_user", "Unknown"))}</td>'
+                    f'<td class="td-status"><span class="status-badge {badge_cls}">{badge_txt}</span>{status_note}</td>'
+                    "</tr>"
+                )
+
+            table_html = (
+                '<table class="proj-table contract-list-table" style="margin-top:4px;">'
+                "<thead><tr>"
+                '<th style="width:56px;">S.No</th>'
+                '<th style="width:90px;">ID</th>'
+                "<th>User</th>"
+                '<th style="width:290px;">Status</th>'
+                "</tr></thead>"
+                f"<tbody>{rows_html}</tbody>"
+                "</table>"
+            )
+            st.markdown(table_html, unsafe_allow_html=True)
 
 def render_new_application_page(flow_data=None):
     flow_data = flow_data or {}
@@ -2769,8 +2891,20 @@ module_display_map = {m: m.replace("_", " ").title() for m in modules.keys()}
 # =====================================================
 # ================= NAVIGATION HANDLING ===============
 # =====================================================
-if st.query_params.get("nav") == "Main":
+if st.query_params.get("nav") == "Dashboard":
+    st.session_state.current_view = "Dashboard"
+    st.query_params.clear()
+    st.rerun()
+elif st.query_params.get("nav") == "Main":
     st.session_state.current_view = "Main"
+    st.query_params.clear()
+    st.rerun()
+elif st.query_params.get("nav") == "GlobalDPRs":
+    st.session_state.current_view = "GlobalDPRs"
+    st.query_params.clear()
+    st.rerun()
+elif st.query_params.get("nav") == "GlobalEstimates":
+    st.session_state.current_view = "GlobalEstimates"
     st.query_params.clear()
     st.rerun()
 elif st.query_params.get("nav") == "Logout":
@@ -2779,6 +2913,10 @@ elif st.query_params.get("nav") == "Logout":
     st.session_state.logged_in = False
     st.session_state.user_id   = None
     st.session_state.nav_back_stack = []
+    st.query_params.clear()
+    st.rerun()
+elif st.query_params.get("nav") == "AboutDept":
+    st.session_state.current_view = "AboutDept"
     st.query_params.clear()
     st.rerun()
 elif st.query_params.get("nav") == "NewApp":
@@ -3073,12 +3211,81 @@ if render_active_flow_page():
     st.stop()
 
 
+def render_global_summary_page(view_key):
+    st.markdown('<div class="dashboard-no-padding-trigger"></div>', unsafe_allow_html=True)
+    dashboard_projects = build_contract_project_catalog()
+    
+    title = "All DPRs" if view_key == "GlobalDPRs" else "All Estimates"
+    desc = "Global list of all Detailed Project Reports." if view_key == "GlobalDPRs" else "Global list of all loaded Estimates."
+    
+    st.markdown(f"""
+      <div class="welcome-hero iidms-registry-header">
+          <div class="registry-header-left">
+              <a href="?nav=Dashboard" target="_self" class="iidms-back-link" style="margin-bottom:12px; display:inline-flex; align-items:center; gap:6px; color:#3b82f6; text-decoration:none; font-weight:600; font-size:14px;">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                  Back to Dashboard
+              </a>
+              <div class="welcome-dept-badge">INSTITUTIONAL RECORD HUB</div>
+              <h1>{title}</h1>
+              <p>{desc}</p>
+          </div>
+      </div>
+    """, unsafe_allow_html=True)
+
+    if not dashboard_projects:
+        st.info("No records found.")
+        render_footer()
+        st.stop()
+
+    table_html = """
+<div class="iidms-registry-container">
+<table class="iidms-registry-table">
+<thead>
+<tr>
+<th>Project Name</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+"""
+    for p in dashboard_projects:
+        pname = esc_html(p.get("project_name", "Unknown Project"))
+        if view_key == "GlobalDPRs":
+            status = "DPR Tracked"
+        else:
+            count = p.get("estimate_count", 0)
+            status = f"{count} Estimates"
+            
+        action_url = f"?nav=Main&dash_action=view_project&dash_project={quote(pname)}"
+        table_html += f"""<tr>
+<td><div class="iidms-proj-name">{pname}</div></td>
+<td><span class="iidms-status-pill green">{status}</span></td>
+<td>
+<a href="{action_url}" target="_self" class="iidms-action-btn">View Project</a>
+</td>
+</tr>
+"""
+    table_html += """
+</tbody>
+</table>
+</div>
+"""
+    st.markdown(table_html, unsafe_allow_html=True)
+    render_footer()
+    st.stop()
+
+
 # =====================================================
 # ================= USER SIDE =========================
 # =====================================================
 if not is_admin:
 
     current_view_key = st.session_state.current_view
+    
+    if current_view_key in ("GlobalDPRs", "GlobalEstimates"):
+        render_global_summary_page(current_view_key)
+        
     selected_module  = "Main" if current_view_key == "Main" else module_display_map.get(current_view_key, current_view_key)
 
     if "current_module" not in st.session_state:
@@ -3090,25 +3297,445 @@ if not is_admin:
         st.session_state.current_module = selected_module
 
     # =========================================================
-    # ==================== MAIN DASHBOARD =====================
+    # =============== ABOUT DEPARTMENT ========================
+    # =========================================================
+    if current_view_key == "AboutDept":
+        st.markdown("""
+        <div style="max-width:900px;margin:32px auto 0 auto;">
+          <div style="background:linear-gradient(135deg,#1a1f2e 0%,#2d3748 60%,#4a5568 100%);
+                      border-radius:16px;padding:48px 44px 44px 44px;margin-bottom:32px;">
+            <div style="color:#60a5fa;font-size:11px;font-weight:700;letter-spacing:2.5px;
+                        text-transform:uppercase;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+              🏛️ &nbsp;INSTITUTIONAL PROFILE
+            </div>
+            <div style="color:#ffffff;font-size:34px;font-weight:800;line-height:1.15;margin-bottom:6px;">
+              Irrigation Department
+            </div>
+            <div style="color:#60a5fa;font-size:34px;font-weight:800;line-height:1.15;margin-bottom:22px;">
+              Government of Uttar Pradesh
+            </div>
+            <div style="color:#cbd5e1;font-size:15px;line-height:1.7;max-width:560px;">
+              Ensuring regional prosperity through the systematic management of water
+              resources, extensive canal networks, and the implementation of
+              state-of-the-art agricultural irrigation standards.
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px 24px;">
+              <div style="font-size:26px;margin-bottom:14px;">🏛️</div>
+              <div style="color:#2563eb;font-size:11px;font-weight:700;letter-spacing:2px;
+                          text-transform:uppercase;margin-bottom:12px;">MANDATE</div>
+              <div style="color:#374151;font-size:14px;line-height:1.65;">
+                To maximize irrigation potential through major, medium, and minor
+                irrigation projects while ensuring efficient operation and maintenance
+                of existing networks.
+              </div>
+            </div>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px 24px;">
+              <div style="font-size:26px;margin-bottom:14px;">〰️</div>
+              <div style="color:#2563eb;font-size:11px;font-weight:700;letter-spacing:2px;
+                          text-transform:uppercase;margin-bottom:12px;">NETWORK SCOPE</div>
+              <div style="color:#374151;font-size:14px;line-height:1.65;">
+                Supervising over 74,000 km of canal networks and 28,000+ state tube
+                wells serving millions of hectares of agricultural land.
+              </div>
+            </div>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px 24px;">
+              <div style="font-size:26px;margin-bottom:14px;">👥</div>
+              <div style="color:#2563eb;font-size:11px;font-weight:700;letter-spacing:2px;
+                          text-transform:uppercase;margin-bottom:12px;">ADMINISTRATIVE HIERARCHY</div>
+              <div style="color:#374151;font-size:14px;line-height:1.65;">
+                Governed by the Principal Secretary, supported by Engineer-in-Chiefs
+                and Chief Engineers across specialized zones and divisions.
+              </div>
+            </div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
+
+    # =========================================================
+    # =============== IIDMS DASHBOARD (Overview) ==============
+    # =========================================================
+    elif current_view_key == "Dashboard":
+        st.markdown('<div class="dashboard-no-padding-trigger"></div>', unsafe_allow_html=True)
+
+        username_display = esc_html(st.session_state.username or "Officer")
+        st.markdown(f"""
+        <div class="iidms-dashboard-hero">
+            <div class="iidms-dashboard-hero-left">
+                <div class="iidms-dashboard-badge">&mdash; GOVERNMENT OF UTTAR PRADESH | CAG OF INDIA</div>
+                <h1 class="iidms-dashboard-title">Irrigation Data Management System</h1>
+                <p class="iidms-dashboard-subtitle">A system to manage irrigation projects, track spending, and review documents.</p>
+            </div>
+            <div class="iidms-dashboard-hero-right">
+                <a href="./?nav=Main" target="_self" class="iidms-dashboard-open-btn">&oplus; OPEN PROJECT</a>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Build dashboard stats
+        dash_projects = []
+        dash_stats = {}
+        if "contract_management" in modules:
+            dash_projects = build_contract_project_catalog()
+            dash_stats = get_contract_mini_dashboard_stats(dash_projects)
+
+        total_projects = len(dash_projects)
+        total_estimates = dash_stats.get("estimates_incomplete", 0) + dash_stats.get("estimates_completed", 0)
+        total_contracts = dash_stats.get("contracts_incomplete", 0) + dash_stats.get("contracts_completed", 0)
+        total_dprs = dash_stats.get("dpr_incomplete", 0) + dash_stats.get("dpr_completed", 0)
+
+        st.markdown(f"""
+        <div class="iidms-dash-cards-row">
+            <div class="iidms-dash-summary-card">
+                <div class="iidms-dash-card-header">
+                    <h3>Project Summary</h3>
+                    <div class="iidms-dash-legend">
+                        <span class="iidms-legend-dot" style="background:#3b82f6;"></span> CHECKS
+                        <span class="iidms-legend-dot" style="background:#fb7185;margin-left:12px;"></span> ISSUES
+                    </div>
+                </div>
+                <div class="iidms-dash-sub-label">ESTIMATES CHECKED VS. ISSUES FOUND</div>
+                <div class="iidms-dash-chart-area" style="padding-top:20px;">
+<svg width="100%" height="220" viewBox="0 0 600 220" preserveAspectRatio="none" style="overflow:visible;">
+<defs>
+<linearGradient id="blue-gradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#3b82f6" stop-opacity="0.18"/>
+<stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
+</linearGradient>
+<filter id="shadow" x="-20%" y="-20%" width="160%" height="160%">
+<feDropShadow dx="0" dy="4" stdDeviation="5" flood-opacity="0.10" flood-color="#000"/>
+</filter>
+<style>
+@keyframes drawLine {{
+  from {{ stroke-dashoffset: 1000; }}
+  to   {{ stroke-dashoffset: 0; }}
+}}
+@keyframes fadeInFill {{
+  from {{ opacity: 0; }}
+  to   {{ opacity: 1; }}
+}}
+@keyframes riseUp {{
+  from {{ opacity: 0; transform: translateY(8px); }}
+  to   {{ opacity: 1; transform: translateY(0); }}
+}}
+.blue-line {{
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 1.6s cubic-bezier(0.4,0,0.2,1) 0.2s forwards;
+}}
+.red-line {{
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 1.6s cubic-bezier(0.4,0,0.2,1) 0.5s forwards;
+}}
+.blue-fill {{
+  opacity: 0;
+  animation: fadeInFill 1.2s ease 0.9s forwards;
+}}
+.ax1 {{ opacity:0; animation: riseUp 0.4s ease 1.0s forwards; }}
+.ax2 {{ opacity:0; animation: riseUp 0.4s ease 1.1s forwards; }}
+.ax3 {{ opacity:0; animation: riseUp 0.4s ease 1.2s forwards; }}
+.ax4 {{ opacity:0; animation: riseUp 0.4s ease 1.3s forwards; }}
+.ax5 {{ opacity:0; animation: riseUp 0.4s ease 1.4s forwards; }}
+.hover-group {{ opacity: 0; transition: opacity 0.22s cubic-bezier(0.4,0,0.2,1); cursor: crosshair; }}
+.hover-group:hover {{ opacity: 1; }}
+.hover-zone {{ fill: transparent; }}
+</style>
+</defs>
+<!-- Grid lines -->
+<line x1="0" y1="40" x2="600" y2="40" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4"/>
+<line x1="0" y1="100" x2="600" y2="100" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4"/>
+<line x1="0" y1="160" x2="600" y2="160" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4"/>
+<!-- Blue Area Fill -->
+<path class="blue-fill" d="M 0 130 C 40 130, 80 90, 120 90 S 180 110, 240 110 S 300 60, 360 60 S 420 25, 480 25 S 530 15, 580 15 L 600 15 L 600 180 L 0 180 Z" fill="url(#blue-gradient)"/>
+<!-- Blue Line -->
+<path class="blue-line" d="M 0 130 C 40 130, 80 90, 120 90 S 180 110, 240 110 S 300 60, 360 60 S 420 25, 480 25 S 530 15, 580 15 L 600 15" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"/>
+<!-- Red Dashed Line -->
+<path class="red-line" d="M 0 160 C 40 160, 80 165, 120 165 S 180 150, 240 150 S 300 175, 360 175 S 420 185, 480 185 S 530 185, 580 185 L 600 185" fill="none" stroke="#fb7185" stroke-width="2" stroke-dasharray="6,4" stroke-linecap="round"/>
+<!-- X Axis Labels -->
+<text class="ax1" x="120" y="212" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">W2</text>
+<text class="ax2" x="240" y="212" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">W3</text>
+<text class="ax3" x="360" y="212" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">W4</text>
+<text class="ax4" x="480" y="212" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">W5</text>
+<text class="ax5" x="580" y="212" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">W6</text>
+<!-- Hover Group W2 -->
+<g class="hover-group">
+<rect class="hover-zone" x="60" y="0" width="120" height="220"/>
+<line x1="120" y1="0" x2="120" y2="190" stroke="#cbd5e1" stroke-width="1"/>
+<circle cx="120" cy="90" r="4" fill="#3b82f6" stroke="#fff" stroke-width="2"/>
+<circle cx="120" cy="165" r="4" fill="#fb7185" stroke="#fff" stroke-width="2"/>
+<g transform="translate(130, 60)">
+<rect x="0" y="0" width="108" height="68" rx="9" fill="#fff" filter="url(#shadow)"/>
+<text x="12" y="22" fill="#0f172a" font-size="12" font-family="Inter, sans-serif" font-weight="700">W2</text>
+<text x="12" y="40" fill="#fb7185" font-size="11" font-family="Inter, sans-serif">anomalies : 3</text>
+<text x="12" y="57" fill="#3b82f6" font-size="11" font-family="Inter, sans-serif">throughput : 55</text>
+</g>
+</g>
+<!-- Hover Group W3 -->
+<g class="hover-group">
+<rect class="hover-zone" x="180" y="0" width="120" height="220"/>
+<line x1="240" y1="0" x2="240" y2="190" stroke="#cbd5e1" stroke-width="1"/>
+<circle cx="240" cy="110" r="4" fill="#3b82f6" stroke="#fff" stroke-width="2"/>
+<circle cx="240" cy="150" r="4" fill="#fb7185" stroke="#fff" stroke-width="2"/>
+<g transform="translate(250, 80)">
+<rect x="0" y="0" width="108" height="68" rx="9" fill="#fff" filter="url(#shadow)"/>
+<text x="12" y="22" fill="#0f172a" font-size="12" font-family="Inter, sans-serif" font-weight="700">W3</text>
+<text x="12" y="40" fill="#fb7185" font-size="11" font-family="Inter, sans-serif">anomalies : 2</text>
+<text x="12" y="57" fill="#3b82f6" font-size="11" font-family="Inter, sans-serif">throughput : 45</text>
+</g>
+</g>
+<!-- Hover Group W4 -->
+<g class="hover-group">
+<rect class="hover-zone" x="300" y="0" width="120" height="220"/>
+<line x1="360" y1="0" x2="360" y2="190" stroke="#cbd5e1" stroke-width="1"/>
+<circle cx="360" cy="60" r="4" fill="#3b82f6" stroke="#fff" stroke-width="2"/>
+<circle cx="360" cy="175" r="4" fill="#fb7185" stroke="#fff" stroke-width="2"/>
+<g transform="translate(370, 30)">
+<rect x="0" y="0" width="108" height="68" rx="9" fill="#fff" filter="url(#shadow)"/>
+<text x="12" y="22" fill="#0f172a" font-size="12" font-family="Inter, sans-serif" font-weight="700">W4</text>
+<text x="12" y="40" fill="#fb7185" font-size="11" font-family="Inter, sans-serif">anomalies : 5</text>
+<text x="12" y="57" fill="#3b82f6" font-size="11" font-family="Inter, sans-serif">throughput : 70</text>
+</g>
+</g>
+<!-- Hover Group W5 -->
+<g class="hover-group">
+<rect class="hover-zone" x="420" y="0" width="110" height="220"/>
+<line x1="480" y1="0" x2="480" y2="190" stroke="#cbd5e1" stroke-width="1"/>
+<circle cx="480" cy="25" r="4" fill="#3b82f6" stroke="#fff" stroke-width="2"/>
+<circle cx="480" cy="185" r="4" fill="#fb7185" stroke="#fff" stroke-width="2"/>
+<g transform="translate(370, 5)">
+<rect x="0" y="0" width="108" height="68" rx="9" fill="#fff" filter="url(#shadow)"/>
+<text x="12" y="22" fill="#0f172a" font-size="12" font-family="Inter, sans-serif" font-weight="700">W5</text>
+<text x="12" y="40" fill="#fb7185" font-size="11" font-family="Inter, sans-serif">anomalies : 1</text>
+<text x="12" y="57" fill="#3b82f6" font-size="11" font-family="Inter, sans-serif">throughput : 88</text>
+</g>
+</g>
+<!-- Hover Group W6 -->
+<g class="hover-group">
+<rect class="hover-zone" x="530" y="0" width="70" height="220"/>
+<line x1="580" y1="0" x2="580" y2="190" stroke="#cbd5e1" stroke-width="1"/>
+<circle cx="580" cy="15" r="4" fill="#3b82f6" stroke="#fff" stroke-width="2"/>
+<circle cx="580" cy="185" r="4" fill="#fb7185" stroke="#fff" stroke-width="2"/>
+<g transform="translate(462, 5)">
+<rect x="0" y="0" width="108" height="68" rx="9" fill="#fff" filter="url(#shadow)"/>
+<text x="12" y="22" fill="#0f172a" font-size="12" font-family="Inter, sans-serif" font-weight="700">W6</text>
+<text x="12" y="40" fill="#fb7185" font-size="11" font-family="Inter, sans-serif">anomalies : 2</text>
+<text x="12" y="57" fill="#3b82f6" font-size="11" font-family="Inter, sans-serif">throughput : 95</text>
+</g>
+</g>
+</svg>
+                </div>
+            </div>
+            <div class="iidms-dash-updates-card">
+                <h3>Recent Updates</h3>
+        """, unsafe_allow_html=True)
+
+        # Show recent projects as update entries
+        if dash_projects:
+            updates_html = ""
+            for p in dash_projects[:5]:
+                pname = esc_html(p.get('project_name', ''))
+                updates_html += f"""
+                <div class="iidms-update-item">
+                    <div class="iidms-update-left">
+                        <div class="iidms-update-name">{pname}</div>
+                    </div>
+                </div>
+                """
+            st.markdown(updates_html, unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="padding:16px;color:#94a3b8;font-size:13px;">No recent updates.</div>', unsafe_allow_html=True)
+
+        # End of top row cards
+        st.markdown('</div></div>', unsafe_allow_html=True)
+
+        st.markdown("""
+        <!-- Work Progress Section -->
+        <div class="iidms-dash-section-title">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+            Work Progress
+        </div>
+        <div class="iidms-progress-grid">
+            <div class="iidms-progress-card">
+                <div class="iidms-progress-icon-wrap blue">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <div class="iidms-progress-label">DPR DOC STATUS</div>
+                <div class="iidms-progress-value">84%</div>
+                <div class="iidms-progress-sub">Verified Parameters</div>
+            </div>
+            <div class="iidms-progress-card">
+                <div class="iidms-progress-icon-wrap orange">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                </div>
+                <div class="iidms-progress-label">ESTIMATE QUEUE</div>
+                <div class="iidms-progress-value">12/14</div>
+                <div class="iidms-progress-sub">Estimates Loaded</div>
+            </div>
+            <div class="iidms-progress-card">
+                <div class="iidms-progress-icon-wrap purple">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                </div>
+                <div class="iidms-progress-label">CONTRACT LEDGER</div>
+                <div class="iidms-progress-value">48</div>
+                <div class="iidms-progress-sub">Agreements Tracked</div>
+            </div>
+        </div>
+
+        <!-- Project Sections -->
+        <div class="iidms-dash-section-title" style="margin-top: 40px;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            Project Sections
+        </div>
+        <div class="iidms-sections-grid">
+            <!-- DPR -->
+            <a href="?nav=GlobalDPRs" target="_self" style="text-decoration:none; color:inherit; display:block;">
+                <div class="iidms-section-card" style="cursor:pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.06)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.02)'">
+                    <div class="iidms-section-icon-bg blue">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <div class="iidms-section-card-content">
+                        <div class="iidms-section-card-title">DPR</div>
+                        <div class="iidms-section-card-desc">Project baseline setup, approvals, and tracking.</div>
+                        <span class="iidms-status-pill green">OPERATIONAL</span>
+                    </div>
+                </div>
+            </a>
+            <!-- Estimates -->
+            <a href="?nav=GlobalEstimates" target="_self" style="text-decoration:none; color:inherit; display:block;">
+                <div class="iidms-section-card" style="cursor:pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.06)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.02)'">
+                    <div class="iidms-section-icon-bg blue">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    </div>
+                    <div class="iidms-section-card-content">
+                        <div class="iidms-section-card-title">Estimates</div>
+                        <div class="iidms-section-card-desc">Management of estimates and agreements.</div>
+                        <span class="iidms-status-pill green">ACTIVE</span>
+                    </div>
+                </div>
+            </a>
+            <!-- Analysis & Checks -->
+            <div class="iidms-section-card">
+                <div class="iidms-section-icon-bg blue">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                </div>
+                <div class="iidms-section-card-content">
+                    <div class="iidms-section-card-title">Analysis & Checks</div>
+                    <div class="iidms-section-card-desc">Check documents for compliance and errors.</div>
+                    <span class="iidms-status-pill green">ACTIVE</span>
+                </div>
+            </div>
+            <!-- Financial Monitoring -->
+            <div class="iidms-section-card">
+                <div class="iidms-section-icon-bg red">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <div class="iidms-section-card-content">
+                    <div class="iidms-section-card-title">Financial Monitoring</div>
+                    <div class="iidms-section-card-desc">Monitor spending against budget.</div>
+                    <span class="iidms-status-pill red">ACTIVE</span>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        render_footer()
+        st.stop()
+
+    # =========================================================
+    # =============== PROJECTS REGISTRY =======================
     # =========================================================
     if selected_module == "Main":
         st.markdown('<div class="dashboard-no-padding-trigger"></div>', unsafe_allow_html=True)
 
         username_display = esc_html(st.session_state.username or "Officer")
+        _reg_search = (st.query_params.get("search") or "").strip()
         st.markdown(f"""
-          <div class="welcome-hero">
-              <div class="welcome-dept-badge">&#127981;&nbsp; Irrigation Department &mdash; Uttar Pradesh</div>
-              <h1>Welcome, {username_display}</h1>
-              <p>This is the <strong>Irrigation Data Management Portal</strong> for the Irrigation Department,
-              Government of Uttar Pradesh, in association with the
-              <strong>Comptroller and Auditor General of India</strong> &mdash; Irrigation Audit Wing.</p>
-              <p class="sub">All audit submissions, project DPRs, estimates and contract records are managed
-              centrally through this secure portal. Data entered here is subject to CAG audit review.</p>
+        <div class="registry-hdr">
+          <div class="registry-hdr-left">
+            <div class="registry-badge">INSTITUTIONAL RECORD HUB</div>
+            <div class="registry-title">Project Registry</div>
+            <div class="registry-subtitle">Centralized list of irrigation projects under audit review.</div>
           </div>
+          <div class="registry-hdr-right">
+            <form class="registry-search-form" action="." method="get">
+              <input type="hidden" name="nav" value="Main" />
+              <div class="registry-search">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+                </svg>
+                <input type="text" name="search" class="registry-search-input"
+                       placeholder="Filter by Project Name/Scheme..."
+                       value="{esc_html(_reg_search)}" />
+              </div>
+            </form>
+            <a href="./?nav=NewApp" target="_self" class="registry-add-btn">+ &nbsp;Register Project</a>
+          </div>
+        </div>
         """, unsafe_allow_html=True)
 
         render_flash_message()
+
+        # Fetch project data + stats early so metrics appear at the top
+        dashboard_projects = []
+        mini_stats = {}
+        if "contract_management" in modules:
+            dashboard_projects = build_contract_project_catalog()
+            mini_stats = get_contract_mini_dashboard_stats(dashboard_projects)
+
+            # --- Metrics grid (hidden for now, set to True to re-enable) ---
+            SHOW_METRICS_ON_PROJECTS = False
+
+            selected_filter = str(st.session_state.get("mini_dashboard_filter", "DPR")).upper()
+            if selected_filter not in {"DPR", "ESTIMATES", "PROJECTS", "CONTRACTS"}:
+                selected_filter = "DPR"
+
+            # Pure HTML metrics grid
+            def _make_metric_card(title, started, finished, filter_key):
+                is_active = selected_filter == filter_key
+                active_cls = "active" if is_active else ""
+                return (
+                    f'<a href="./?mini_filter={filter_key}" target="_self" class="metric-card {active_cls}">'
+                    f'<div class="metric-card-top-bar"></div>'
+                    f'<div class="metric-card-label">{esc_html(title)}</div>'
+                    f'<div class="metric-card-nums">'
+                    f'<div class="metric-num-block">'
+                    f'<div class="metric-big-num">{started}</div>'
+                    f'<div class="metric-num-label">Started</div>'
+                    f'</div>'
+                    f'<div class="metric-sep">/</div>'
+                    f'<div class="metric-num-block">'
+                    f'<div class="metric-big-num finished">{finished}</div>'
+                    f'<div class="metric-num-label">Finished</div>'
+                    f'</div>'
+                    f'</div>'
+                    f'</a>'
+                )
+
+            if SHOW_METRICS_ON_PROJECTS:
+                c1 = _make_metric_card("Projects",
+                    mini_stats["projects_incomplete"] + mini_stats["projects_completed"],
+                    mini_stats["projects_completed"], "PROJECTS")
+                c2 = _make_metric_card("DPRs",
+                    mini_stats["dpr_incomplete"] + mini_stats["dpr_completed"],
+                    mini_stats["dpr_completed"], "DPR")
+                c3 = _make_metric_card("Estimates",
+                    mini_stats["estimates_incomplete"] + mini_stats["estimates_completed"],
+                    mini_stats["estimates_completed"], "ESTIMATES")
+                c4 = _make_metric_card("Contracts",
+                    mini_stats["contracts_incomplete"] + mini_stats["contracts_completed"],
+                    mini_stats["contracts_completed"], "CONTRACTS")
+
+                st.markdown(
+                    f'<div class="metrics-grid">{c1}{c2}{c3}{c4}</div>',
+                    unsafe_allow_html=True
+                )
+
+                st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
         draft_summaries = get_user_draft_summaries(user_id)
 
@@ -3217,98 +3844,23 @@ if not is_admin:
                         r1.write(f"{s_no}")
                         with r2:
                             label_text = f"**{est_no}**" if (est_no and est_no != "---") else f"**{module_display_map.get(group.get('module'),'Draft')} (Draft)**"
-                            if st.button(label_text, key=f"btn_grp_{i}_{est_no}", use_container_width=True):
-                                open_flow_page(
-                                    "estimate_group",
-                                    data={
-                                        "est_no": est_no,
-                                        "est_yr": est_yr,
-                                        "user_id": user_id,
-                                        "module": group.get("module"),
-                                    },
-                                    push_history=False,
-                                )
-                                st.rerun()
-                        with r3:
-                            y_val = est_yr.year if hasattr(est_yr, 'year') else est_yr
-                            st.write(str(y_val))
-                        with r4:
-                            st.write(fmt_dt(latest_dt))
-                        with r56:
-                            st.markdown(
-                                f'<div class="apps-badge-static">{app_count} '
-                                f'Application{"s" if app_count > 1 else ""}</div>',
-                                unsafe_allow_html=True
-                            )
-                        st.markdown("<hr style='margin:6px 0; border:0; border-top:1px solid #f3f4f6;'>",
-                                    unsafe_allow_html=True)
-    
-                    render_pagination_footer("dashboard_page", total_pages)
 
-        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-        dashboard_projects = []
-        if "contract_management" in modules:
-            dashboard_projects = build_contract_project_catalog()
-            mini_stats = get_contract_mini_dashboard_stats(dashboard_projects)
 
-            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-            selected_filter = str(st.session_state.get("mini_dashboard_filter", "DPR")).upper()
-            if selected_filter not in {"DPR", "ESTIMATES", "PROJECTS", "CONTRACTS"}:
-                selected_filter = "DPR"
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-            # Pure HTML metrics grid â€” rendered as a single st.markdown block
-            def _make_metric_card(title, started, finished, filter_key):
-                is_active = selected_filter == filter_key
-                active_cls = "active" if is_active else ""
-                return (
-                    f'<a href="./?mini_filter={filter_key}" target="_self" class="metric-card {active_cls}">'
-                    f'<div class="metric-card-top-bar"></div>'
-                    f'<div class="metric-card-label">{esc_html(title)}</div>'
-                    f'<div class="metric-card-nums">'
-                    f'<div class="metric-num-block">'
-                    f'<div class="metric-big-num">{started}</div>'
-                    f'<div class="metric-num-label">Started</div>'
-                    f'</div>'
-                    f'<div class="metric-sep">/</div>'
-                    f'<div class="metric-num-block">'
-                    f'<div class="metric-big-num finished">{finished}</div>'
-                    f'<div class="metric-num-label">Finished</div>'
-                    f'</div>'
-                    f'</div>'
-                    f'</a>'
-                )
-
-            c1 = _make_metric_card("Projects",
-                mini_stats["projects_incomplete"] + mini_stats["projects_completed"],
-                mini_stats["projects_completed"], "PROJECTS")
-            c2 = _make_metric_card("DPRs",
-                mini_stats["dpr_incomplete"] + mini_stats["dpr_completed"],
-                mini_stats["dpr_completed"], "DPR")
-            c3 = _make_metric_card("Estimates",
-                mini_stats["estimates_incomplete"] + mini_stats["estimates_completed"],
-                mini_stats["estimates_completed"], "ESTIMATES")
-            c4 = _make_metric_card("Contracts",
-                mini_stats["contracts_incomplete"] + mini_stats["contracts_completed"],
-                mini_stats["contracts_completed"], "CONTRACTS")
-
-            st.markdown(
-                f'<div class="metrics-grid">{c1}{c2}{c3}{c4}</div>',
-                unsafe_allow_html=True
-            )
-
-            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="section-hdr">
-            <span class="section-hdr-text">Your Projects</span>
-            <div class="section-hdr-line"></div>
-        </div>
-        """, unsafe_allow_html=True)
 
         if "contract_management" not in modules:
             st.info("Project list is available under Contract Management module.")
         else:
             filtered_dashboard_projects = list(dashboard_projects)
+
+            _search_q = (st.query_params.get("search") or "").strip().lower()
+            if _search_q:
+                filtered_dashboard_projects = [
+                    p for p in filtered_dashboard_projects
+                    if _search_q in (p.get("project_name") or "").lower()
+                ]
+
             selected_filter = str(st.session_state.get("mini_dashboard_filter", "DPR")).upper()
             if selected_filter not in {"DPR", "ESTIMATES", "PROJECTS", "CONTRACTS"}:
                 selected_filter = "DPR"
@@ -3375,7 +3927,7 @@ if not is_admin:
                     filtered_dashboard_projects, "dashboard_projects_page", render_controls=False
                 )
 
-                # Build pure HTML table â€” zero st.columns(), all concatenated strings
+                # Build IIDMS-style project registry table
                 rows_html = ""
                 for i, proj in enumerate(paged_projects):
                     project_name = proj.get("project_name", "")
@@ -3385,50 +3937,72 @@ if not is_admin:
                     project_key = " ".join((project_name or "").split()).lower()
                     est_counts = estimate_summary_map.get(project_key, {"completed": 0, "incomplete": 0})
                     contract_counts = contract_summary_map.get(project_key, {"completed": 0, "incomplete": 0})
-                    s_no = start_idx + i + 1
 
                     project_href = f'./?dash_project={quote(str(project_name))}'
 
-                    if has_dpr:
-                        view_dpr_href = f'./?dash_action=view_dpr&dash_project={quote(str(project_name))}'
-                        dpr_cell = (
-                            f'<span class="status-badge badge-done">&#10003; Available</span>'
-                            f'<a href="{view_dpr_href}" target="_self" class="tbl-action-link">View &rarr;</a>'
-                        )
+                    # Extract DPR fields for display
+                    dpr_type     = (project_dpr.get("type_of_project") or "").strip() if project_dpr else ""
+                    dpr_location = (project_dpr.get("location_of_head_works") or "").strip() if project_dpr else ""
+                    if not dpr_location and project_dpr:
+                        raw_dist = project_dpr.get("districts_covered") or ""
+                        dpr_location = str(raw_dist).split(",")[0].strip() if raw_dist else ""
+                    dpr_amount = ""
+                    if project_dpr:
+                        for _rev in range(1, 7):
+                            _val = (project_dpr.get(f"amount_of_revised_dpr_revision_{_rev}") or "").strip()
+                            if _val:
+                                dpr_amount = _val
+                                break
+
+                    # Identity cell HTML
+                    identity_html = f'<div class="iidms-proj-name"><a href="{project_href}" target="_self">{esc_html(project_name)}</a></div>'
+                    if dpr_type or dpr_location:
+                        tags = ""
+                        if dpr_type:
+                            tags += f'<span class="proj-type-tag">{esc_html(dpr_type)}</span>'
+                        if dpr_location:
+                            tags += f'<span class="proj-location-text">{esc_html(dpr_location)}</span>'
+                        identity_html += f'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:5px;">{tags}</div>'
+
+                    # Sanctioned value cell HTML
+                    if dpr_amount:
+                        sanction_html = f'<div class="td-sanction-amount">&#8377;{esc_html(dpr_amount)}</div><div class="td-sanction-label">Approved Budget</div>'
                     else:
-                        fill_dpr_href = f'./?dash_action=fill_dpr&dash_project={quote(str(project_name))}'
-                        dpr_cell = (
-                            f'<span class="status-badge badge-pending">&#9675; Pending</span>'
-                            f'<a href="{fill_dpr_href}" target="_self" class="tbl-action-link">Fill &rarr;</a>'
-                        )
+                        sanction_html = '<div class="td-sanction-empty">&mdash;</div>'
 
-                    est_done = est_counts["completed"]
-                    est_total = est_counts["completed"] + est_counts["incomplete"]
-                    est_cell = f'{est_done} / {est_total}' if est_total > 0 else str(estimate_count)
+                    # Calculate health % based on DPR + estimates + contracts completion
+                    total_items = 1 + est_counts["completed"] + est_counts["incomplete"] + contract_counts["completed"] + contract_counts["incomplete"]
+                    done_items = (1 if has_dpr else 0) + est_counts["completed"] + contract_counts["completed"]
+                    health_pct = int((done_items / max(total_items, 1)) * 100)
 
-                    con_done = contract_counts["completed"]
-                    con_total = contract_counts["completed"] + contract_counts["incomplete"]
-                    con_cell = f'{con_done} / {con_total}'
+                    if health_pct >= 90:
+                        health_cls = "health-green"
+                    elif health_pct >= 60:
+                        health_cls = "health-orange"
+                    else:
+                        health_cls = "health-red"
+
+                    status_text = "COMPLETED" if health_pct == 100 else "ONGOING"
+                    status_cls = "iidms-status-done" if health_pct == 100 else "iidms-status-ongoing"
 
                     rows_html += (
                         f'<tr>'
-                        f'<td class="td-sno">{s_no:02d}</td>'
-                        f'<td class="td-name"><a href="{project_href}" target="_self">{esc_html(project_name)}</a></td>'
-                        f'<td class="td-status">{dpr_cell}</td>'
-                        f'<td class="td-count">{est_cell}</td>'
-                        f'<td class="td-count">{con_cell}</td>'
+                        f'<td class="td-project-identity">{identity_html}</td>'
+                        f'<td>{sanction_html}</td>'
+                        f'<td class="td-health"><span class="health-badge {health_cls}"><span class="health-dot"></span> HEALTH: {health_pct}%</span></td>'
+                        f'<td><span class="{status_cls}">{status_text}</span></td>'
+                        f'<td class="td-workspace"><a href="{project_href}" target="_self" class="iidms-open-btn">Open Project &rsaquo;</a></td>'
                         f'</tr>'
                     )
 
-                th_est = '<th style="width:120px;text-align:center;">Estimates<br><span style="font-size:8.5px;opacity:0.6;font-weight:400;text-transform:none;letter-spacing:0;">done / total</span></th>'
-                th_con = '<th style="width:120px;text-align:center;">Contracts<br><span style="font-size:8.5px;opacity:0.6;font-weight:400;text-transform:none;letter-spacing:0;">done / total</span></th>'
                 table_html = (
-                    '<table class="proj-table">'
+                    '<table class="proj-table iidms-registry">'
                     '<thead><tr>'
-                    '<th style="width:52px;">#</th>'
-                    '<th>Project Name</th>'
-                    '<th style="width:200px;">DPR Status</th>'
-                    + th_est + th_con +
+                    '<th>PROJECT IDENTITY &amp; LOCATION</th>'
+                    '<th style="width:180px;">SANCTIONED VALUE</th>'
+                    '<th style="width:160px;">PROJECT HEALTH</th>'
+                    '<th style="width:120px;">STATUS</th>'
+                    '<th style="width:160px;">AUDIT WORKSPACE</th>'
                     '</tr></thead>'
                     '<tbody>' + rows_html + '</tbody>'
                     '</table>'

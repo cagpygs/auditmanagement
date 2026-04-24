@@ -1,5 +1,4 @@
 import argparse
-import os
 import re
 import subprocess
 import time
@@ -7,7 +6,6 @@ import urllib.request
 from contextlib import suppress
 from pathlib import Path
 
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 

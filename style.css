@@ -94,8 +94,6 @@ footer,
 
 .block-container {
     padding-top: 0 !important;
-    padding-left: 48px !important;
-    padding-right: 48px !important;
     max-width: 1360px !important;
     margin: 0 auto !important;
     padding-bottom: 40px !important;
@@ -108,12 +106,9 @@ footer,
     left: 0;
     right: 0;
     z-index: 9999;
-    background: var(--primary);
-    height: 64px;
     display: flex;
     align-items: center;
     padding: 0 48px;
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.28);
 }
 
 #sticky-header-container::before {
@@ -132,8 +127,6 @@ footer,
     bottom: 0;
     left: 0;
     right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(192, 57, 43, 0.5) 50%, transparent);
 }
 
 .nav-brand {
@@ -176,21 +169,16 @@ footer,
     font-weight: 500;
     color: rgba(255, 255, 255, 0.65) !important;
     text-decoration: none !important;
-    padding: 7px 14px;
-    border-radius: var(--radius-sm);
-    transition: background 0.15s, color 0.15s;
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
 }
 
 .nav-item-minimal:hover {
-    background: rgba(255, 255, 255, 0.10);
     color: #FFFFFF !important;
 }
 
 .nav-item-minimal.active {
-    background: rgba(255, 255, 255, 0.14);
     color: #FFFFFF !important;
     font-weight: 600;
 }
@@ -314,7 +302,6 @@ footer,
     margin-bottom: 24px;
     box-shadow: var(--shadow-xs);
     position: relative;
-    overflow: hidden;
 }
 
 .welcome-hero::before {
@@ -368,11 +355,8 @@ footer,
 
 /* â”€â”€ ADMIN HERO â”€â”€ */
 .hero-banner {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%) !important;
     padding: 28px 32px !important;
-    border-radius: var(--radius-lg) !important;
     margin-bottom: 24px !important;
-    box-shadow: var(--shadow-md) !important;
 }
 
 .hero-banner h1 {
@@ -394,7 +378,6 @@ footer,
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
     margin-bottom: 24px;
 }
 
@@ -518,26 +501,15 @@ footer,
 /* â”€â”€ PROJECT TABLE â€” pure HTML â”€â”€ */
 .proj-table {
     width: 100%;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
     overflow: hidden;
-    box-shadow: var(--shadow-xs);
     border-collapse: separate;
     border-spacing: 0;
 }
 
-.proj-table thead tr {
-    background: var(--primary);
-}
-
 .proj-table thead th {
     font-family: var(--font-body);
-    font-size: 10px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.65);
     text-transform: uppercase;
-    letter-spacing: 0.7px;
     padding: 13px 16px;
     text-align: left;
     white-space: nowrap;
@@ -554,11 +526,6 @@ footer,
 
 .proj-table tbody tr {
     border-bottom: 1px solid var(--border-light);
-    transition: background 0.1s;
-}
-
-.proj-table tbody tr:hover {
-    background: var(--primary-pale);
 }
 
 .proj-table tbody tr:nth-child(even) {
@@ -629,7 +596,6 @@ footer,
     align-items: center;
     gap: 5px;
     font-size: 11.5px;
-    font-weight: 600;
     padding: 4px 12px;
     border-radius: 99px;
     letter-spacing: 0.05px;
@@ -991,26 +957,16 @@ footer,
 
 /* â”€â”€ TABS â”€â”€ */
 .stTabs [data-baseweb="tab-list"] {
-    background: var(--bg-surface) !important;
     border-bottom: 1px solid var(--border) !important;
-    gap: 0 !important;
-    padding: 0 6px !important;
 }
 
 .stTabs [data-baseweb="tab"] {
-    border-radius: 0 !important;
     font-size: 12.5px !important;
     font-weight: 600 !important;
     color: var(--text-muted) !important;
     border-bottom: 2px solid transparent !important;
-    padding: 12px 18px !important;
     background: transparent !important;
     white-space: nowrap;
-}
-
-.stTabs [aria-selected="true"] {
-    color: var(--primary) !important;
-    border-bottom-color: var(--primary) !important;
 }
 
 .stTabs [data-baseweb="tab-panel"] {
@@ -1020,8 +976,6 @@ footer,
 /* â”€â”€ FILE UPLOADER â”€â”€ */
 [data-testid="stFileUploader"] {
     border: 1.5px dashed rgba(44, 62, 107, 0.22) !important;
-    border-radius: var(--radius-md) !important;
-    background: var(--primary-pale) !important;
     padding: 8px 10px !important;
     margin-bottom: 6px !important;
 }
@@ -1282,38 +1236,38 @@ footer,
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    border: 1px solid rgba(51, 73, 120, 0.22);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(243, 247, 255, 0.75) 100%);
-    box-shadow: 0 10px 18px rgba(22, 39, 74, 0.10);
-    color: var(--primary) !important;
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: none;
+    background: #1e293b;
+    box-shadow: none;
+    color: #fff !important;
     text-decoration: none !important;
-    font-weight: 800;
+    font-weight: 600;
     font-size: 14px;
     letter-spacing: 0.1px;
-    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, background 0.12s ease, color 0.12s;
+    transition: all 0.15s;
 }
 
 .cta-link:hover {
+    background: #0f172a;
     transform: translateY(-1px);
-    border-color: rgba(51, 73, 120, 0.34);
-    box-shadow: 0 14px 22px rgba(22, 39, 74, 0.14);
-    color: var(--accent) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    color: #fff !important;
 }
 
 .cta-link:active {
     transform: translateY(0);
-    box-shadow: 0 10px 18px rgba(22, 39, 74, 0.10);
+    box-shadow: none;
 }
 
 .cta-link:focus-visible {
-    outline: 3px solid rgba(250, 164, 7, 0.35);
+    outline: 3px solid rgba(37, 99, 235, 0.35);
     outline-offset: 2px;
 }
 
 .cta-link.cta-sm {
-    padding: 6px 12px;
+    padding: 7px 14px;
     font-size: 13px;
 }
 
@@ -1469,7 +1423,6 @@ body:has(.dashboard-no-padding-trigger) .stButton>button {
     background: var(--primary);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    box-shadow: var(--shadow-md);
 }
 
 .cag-footer-tricolor {
@@ -1779,27 +1732,26 @@ body:has(.dashboard-no-padding-trigger) .stButton>button {
 }
 
 .stTabs [data-baseweb="tab-list"] {
-    background: linear-gradient(180deg, #EEF3FC 0%, #E6EDF9 100%) !important;
-    border: 1px solid #D3DEF0 !important;
-    border-radius: 999px !important;
-    padding: 4px !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 0 4px 0 !important;
     gap: 4px !important;
 }
 
 .stTabs [data-baseweb="tab"] {
-    border-radius: 999px !important;
+    border-radius: 8px !important;
     border: 1px solid transparent !important;
-    padding: 9px 14px !important;
+    padding: 10px 20px !important;
     min-height: 36px !important;
-    transition: all 0.16s ease !important;
+    transition: all 0.15s ease !important;
 }
 
 .stTabs [aria-selected="true"] {
     color: #FFFFFF !important;
-    border: 1px solid rgba(17, 41, 82, 0.55) !important;
-    border-bottom-color: rgba(17, 41, 82, 0.55) !important;
-    background: linear-gradient(120deg, #2A4378 0%, #345894 100%) !important;
-    box-shadow: 0 4px 12px rgba(34, 56, 99, 0.22);
+    border: 1px solid transparent !important;
+    background: #2563eb !important;
+    box-shadow: none !important;
 }
 
 .stTabs [data-baseweb="tab-panel"] {
@@ -1821,19 +1773,20 @@ body:has(.dashboard-no-padding-trigger) .stButton>button {
 }
 
 .stButton > button {
-    border-radius: 12px !important;
-    box-shadow: 0 6px 14px rgba(27, 39, 73, 0.08);
+    border-radius: 8px !important;
+    box-shadow: none;
 }
 
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, #2B4580 0%, #3962A6 100%) !important;
-    border-color: #2E4D89 !important;
+    background: #1e293b !important;
+    border-color: #1e293b !important;
 }
 
 .stButton > button[kind="primary"]:hover {
-    background: linear-gradient(135deg, #213A6C 0%, #30548E 100%) !important;
+    background: #0f172a !important;
+    border-color: #0f172a !important;
     transform: translateY(-1px);
-    box-shadow: 0 10px 18px rgba(22, 39, 74, 0.22);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 [data-testid="stFileUploader"] {
