@@ -507,7 +507,70 @@ def clear_module_state(m_key=None):
                 if key.startswith(f"{table}_"):
                     del st.session_state[key]
 
+def custom_file_uploader(label, key, type=None):
+    safe_key = str(key).replace(" ", "_").replace("-", "_")
 
+    # ✅ CORRECT: use st.file_uploader (NOT custom_file_uploader)
+    uploaded_file = st.file_uploader(
+        label,
+        type=type or ["pdf", "doc", "docx", "xlsx", "xls", "jpg", "jpeg", "png"],
+        key=key,
+        label_visibility="collapsed",
+    )
+
+    is_uploaded = uploaded_file is not None
+    display_text = f"✓ {uploaded_file.name}" if is_uploaded else label
+
+    bg = "#ecfdf5" if is_uploaded else "#fffbeb"
+    border = "#10b981" if is_uploaded else "#f59e0b"
+    color = "#047857" if is_uploaded else "#b45309"
+    hover_bg = "#d1fae5" if is_uploaded else "#fef3c7"
+    hover_border = "#059669" if is_uploaded else "#d97706"
+
+    st.markdown(f"""
+    <style>
+    div[data-testid="stElementContainer"]:has(div.st-key-{safe_key}) {{
+        border: none !important;
+        background: transparent !important;
+    }}
+
+    div.st-key-{safe_key} [data-testid="stFileUploader"] label,
+    div.st-key-{safe_key} [data-testid="stFileUploaderDropzoneInstructions"] {{
+        display: none !important;
+    }}
+
+    div.st-key-{safe_key} section[data-testid="stFileUploaderDropzone"] {{
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }}
+
+    div.st-key-{safe_key} button[data-testid="stBaseButton-secondary"] {{
+        width: 100% !important;
+        height: 40px !important;
+        background: {bg} !important;
+        border: 1.5px solid {border} !important;
+        border-radius: 8px !important;
+        color: transparent !important;
+        font-size: 0 !important;
+    }}
+
+    div.st-key-{safe_key} button[data-testid="stBaseButton-secondary"]::after {{
+        content: "{display_text}";
+        color: {color};
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+    }}
+
+    div.st-key-{safe_key} button[data-testid="stBaseButton-secondary"]:hover {{
+        background: {hover_bg} !important;
+        border-color: {hover_border} !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+    return uploaded_file
 # =====================================================
 # ================= HELPER FUNCTIONS ==================
 # =====================================================
@@ -1203,7 +1266,7 @@ def render_estimate_group_page(est_no, est_yr, user_id=None, module=None):
             curr_est = m_info.get("estimate_attachment")
             if curr_est and os.path.exists(curr_est):
                 st.success(f"Estimate on record: `{os.path.basename(curr_est)}`")
-            est_f = st.file_uploader(
+            est_f = custom_file_uploader(
                 "Upload / Replace Estimate",
                 type=["pdf", "docx", "xlsx", "jpg", "png"],
                 key=f"dlg_up_est_{up_id}",
@@ -1750,7 +1813,7 @@ def render_create_dpr_page(flow_data=None):
     flow_data = flow_data or {}
     project_name = (flow_data.get("project_name") or "").strip()
     safe_project = _safe_key(project_name or "project")
-    render_flow_header(f"Create DPR: {project_name or 'Unknown'}", back_key=f"back_create_dpr_{safe_project}")
+    render_flow_header("", back_key=f"back_create_dpr_{safe_project}")
 
     if not project_name:
         st.warning("No project selected.")
@@ -1834,20 +1897,25 @@ def render_create_dpr_page(flow_data=None):
         return val
 
     # ── CARD HEADER ──
-    hdr_col, up_col, save_col = st.columns([5, 2.2, 2])
+    hdr_col, up_col, save_col = st.columns([5, 2.2, 2.2])
     with hdr_col:
-        st.markdown("""
-        <div class="dpr-hdr-title">
-            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-            </svg>
-            Detailed Project Report (DPR)
+        st.markdown(f"""
+        <div class="dpr-hdr-info">
+            <div class="dpr-hdr-icon">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                </svg>
+            </div>
+            <div class="dpr-hdr-text">
+                <div class="dpr-hdr-title">Detailed Project Report (DPR)</div>
+                <div class="dpr-hdr-project">{project_name}</div>
+                <div class="dpr-hdr-sub">Official project scope and approved parameters.</div>
+            </div>
         </div>
-        <div class="dpr-hdr-sub">Official project scope and approved parameters.</div>
         """, unsafe_allow_html=True)
     with up_col:
-        upload_inputs["upload_complete_dpr"] = st.file_uploader(
+        upload_inputs["upload_complete_dpr"] = custom_file_uploader(
             "Upload Original DPR",
             type=["pdf", "doc", "docx", "xlsx", "xls", "jpg", "jpeg", "png"],
             key=f"dpr_upload_upload_complete_dpr_{safe_project}",
@@ -1856,7 +1924,6 @@ def render_create_dpr_page(flow_data=None):
         if existing_dpr_file:
             st.caption(f"On record: {existing_dpr_file}")
     with save_col:
-        st.markdown('<div style="height:28px"></div>', unsafe_allow_html=True)
         save_clicked_top = st.button(
             "\U0001f4be Save Documentation",
             key=f"btn_save_dpr_top_{safe_project}",
@@ -1969,7 +2036,7 @@ def render_create_dpr_page(flow_data=None):
         for ci, ucfg in enumerate(other_uploads):
             tc = dc1 if ci % 2 == 0 else dc2
             with tc:
-                upload_inputs[ucfg["key"]] = st.file_uploader(
+                upload_inputs[ucfg["key"]] = custom_file_uploader(
                     ucfg["label"],
                     type=["pdf", "doc", "docx", "xlsx", "xls", "jpg", "jpeg", "png"],
                     key=f"dpr_upload_{ucfg['key']}_{safe_project}",
@@ -2024,7 +2091,7 @@ def render_create_dpr_page(flow_data=None):
                 st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
                 _, up_col2 = st.columns([3, 2])
                 with up_col2:
-                    upload_inputs[f"revision_{rev_num}"] = st.file_uploader(
+                    upload_inputs[f"revision_{rev_num}"] = custom_file_uploader(
                         f"Upload Revised DPR PDF (V{rev_num})",
                         type=["pdf", "doc", "docx", "jpg", "jpeg", "png"],
                         key=f"dpr_rev_{rev_num}_pdf_{safe_project}",
@@ -2356,7 +2423,7 @@ def render_create_estimate_page(flow_data=None):
 
     # Estimate PDF upload
     st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-    est_pdf_upload = st.file_uploader(
+    est_pdf_upload = custom_file_uploader(
         "Upload Estimate Document (PDF) *",
         type=["pdf", "doc", "docx", "xlsx", "xls", "jpg", "jpeg", "png"],
         key=f"est_pdf_upload_{safe_project}",
@@ -4906,7 +4973,7 @@ if not is_admin:
         with upload_col:
             if existing_est:
                 st.caption(f"On record: {os.path.basename(existing_est)}")
-            est_file = st.file_uploader(
+            est_file = custom_file_uploader(
                 "Upload Estimate",
                 type=['pdf', 'doc', 'docx', 'xlsx', 'xls', 'jpg', 'jpeg', 'png'],
                 key="uploader_estimate",
