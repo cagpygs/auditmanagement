@@ -373,8 +373,9 @@ username_value = st.session_state.get("username") or "User"
 username_initial = username_value[0].upper() if username_value else "U"
 
 _cv = st.session_state.get("current_view", "Main")
-_nav_active   = lambda key: "sidebar-nav-item sidebar-nav-active" if _cv == key else "sidebar-nav-item"
-_main_active  = "sidebar-nav-item sidebar-nav-active" if _cv in ("Main",) else "sidebar-nav-item"
+_nav_active      = lambda key: "sidebar-nav-item sidebar-nav-active" if _cv == key else "sidebar-nav-item"
+_main_active     = "sidebar-nav-item sidebar-nav-active" if _cv in ("Main",) else "sidebar-nav-item"
+_analysis_active = "sidebar-nav-item sidebar-nav-active" if _cv == "Analysis" else "sidebar-nav-item"
 
 _ic_dashboard = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'
 _ic_projects  = '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v4c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 9v4c0 1.66 4.03 3 9 3s9-1.34 9-3V9"/><path d="M3 13v4c0 1.66 4.03 3 9 3s9-1.34 9-3v-4"/></svg>'
@@ -393,7 +394,7 @@ with st.sidebar:
     </div>
     <a href="./?nav=Dashboard" target="_self" class="{_nav_active("Dashboard")}"><span class="sidebar-nav-icon">{_ic_dashboard}</span> Dashboard</a>
     <a href="./?nav=Main" target="_self" class="{_main_active}"><span class="sidebar-nav-icon">{_ic_projects}</span> Projects</a>
-    <a href="./?nav=Main" target="_self" class="sidebar-nav-item"><span class="sidebar-nav-icon">{_ic_analysis}</span> Analysis</a>
+    <a href="./?nav=Analysis" target="_self" class="{_analysis_active}"><span class="sidebar-nav-icon">{_ic_analysis}</span> Analysis</a>
     <a href="./?nav=AboutDept" target="_self" class="{_nav_active("AboutDept")}"><span class="sidebar-nav-icon">{_ic_about}</span> About Department</a>
     <div class="sidebar-section-label">SYSTEM UTILITIES</div>
     <a href="#" target="_self" class="sidebar-nav-item"><span class="sidebar-nav-icon">{_ic_redflags}</span> Red Flags</a>
@@ -2899,6 +2900,10 @@ elif st.query_params.get("nav") == "Main":
     st.session_state.current_view = "Main"
     st.query_params.clear()
     st.rerun()
+elif st.query_params.get("nav") == "Analysis":
+    st.session_state.current_view = "Analysis"
+    st.query_params.clear()
+    st.rerun()
 elif st.query_params.get("nav") == "GlobalDPRs":
     st.session_state.current_view = "GlobalDPRs"
     st.query_params.clear()
@@ -3211,24 +3216,267 @@ if render_active_flow_page():
     st.stop()
 
 
+def render_analysis_page():
+    st.markdown('<div class="dashboard-no-padding-trigger"></div>', unsafe_allow_html=True)
+    st.markdown("""
+    <!-- Page Header -->
+    <div class="analysis-page-header">
+      <div class="analysis-header-left">
+        <div class="analysis-page-badge">
+          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+          PROJECT CHECKS
+        </div>
+        <div class="analysis-page-title">Project Analysis &amp; Checks</div>
+        <div class="analysis-page-subtitle">Verify data and check for issues across the project list.</div>
+      </div>
+      <div class="analysis-system-status">
+        <span class="analysis-status-dot"></span> SYSTEM ACTIVE
+      </div>
+    </div>
+
+    <!-- Project Query Dark Card -->
+    <div class="analysis-query-card">
+      <div class="analysis-query-header">
+        <div class="analysis-query-icon">
+          <svg width="18" height="18" fill="none" stroke="#60a5fa" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div class="analysis-query-title">Project Query</div>
+      </div>
+      <div class="analysis-query-sub">
+        Query across the entire project list using simple words. The system will check for errors between reports and estimates.
+      </div>
+      <div class="analysis-input-row">
+        <div class="analysis-input-icon">
+          <svg width="16" height="16" fill="none" stroke="#6e7681" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+          </svg>
+        </div>
+        <input class="analysis-input-field" type="text"
+               placeholder="Compare DPR sanctioned cost vs actual agreement value for all projects..." />
+        <button class="analysis-analyze-btn">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          ANALYZE
+        </button>
+      </div>
+      <div class="analysis-chips-row">
+        <span class="analysis-chip">Compare DPR sanctioned cost vs actual agreement value for all Division IV projects.</span>
+        <span class="analysis-chip">Identify discrepancies between BOCW payments and scheduled labor components in Sharda Modernization.</span>
+        <span class="analysis-chip">Retrieve all revised technical sanctions where the increase exceeds 20% of A&amp;F</span>
+        <span class="analysis-chip">Cross-verify MB entries with site inspection reports for Upper Ganga project.</span>
+      </div>
+    </div>
+
+    <!-- Project Compliance Checks -->
+    <div class="analysis-compliance-header">
+      <div class="analysis-compliance-title-row">
+        <svg width="20" height="20" fill="none" stroke="#3b82f6" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        <span class="analysis-compliance-title">Project Compliance Checks</span>
+      </div>
+      <div class="analysis-checking-badge">
+        <span class="analysis-checking-dot"></span> CHECKING PROJECTS
+      </div>
+    </div>
+
+    <div class="analysis-compliance-grid">
+
+      <!-- 1. EXPENDITURE INTENSITY -->
+      <div class="acc-card">
+        <div class="acc-icon cc-red">
+          <svg width="18" height="18" fill="none" stroke="#ef4444" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div class="acc-name" style="color:#ef4444;">EXPENDITURE INTENSITY</div>
+        <div class="acc-desc">Net Paid vs Sanctioned Budget</div>
+        <div class="acc-footer">
+          <div><div class="acc-thr-lbl">THRESHOLD</div><div class="acc-thr-val">&gt; 100%</div></div>
+          <div class="acc-risk-col"><div class="acc-risk-lbl">RISK</div><span class="acc-badge risk-critical">Critical</span></div>
+        </div>
+      </div>
+
+      <!-- 2. AGREEMENT SPLITTING -->
+      <div class="acc-card">
+        <div class="acc-icon cc-yellow">
+          <svg width="18" height="18" fill="none" stroke="#ca8a04" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+          </svg>
+        </div>
+        <div class="acc-name" style="color:#ca8a04;">AGREEMENT SPLITTING</div>
+        <div class="acc-desc">Fragmented contracts in same ID</div>
+        <div class="acc-footer">
+          <div><div class="acc-thr-lbl">THRESHOLD</div><div class="acc-thr-val">Detected</div></div>
+          <div class="acc-risk-col"><div class="acc-risk-lbl">RISK</div><span class="acc-badge risk-high">High</span></div>
+        </div>
+      </div>
+
+      <!-- 3. TS COMPLIANCE -->
+      <div class="acc-card">
+        <div class="acc-icon cc-blue">
+          <svg width="18" height="18" fill="none" stroke="#3b82f6" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+        <div class="acc-name" style="color:#3b82f6;">TS COMPLIANCE</div>
+        <div class="acc-desc">Agreements &gt; TS Value</div>
+        <div class="acc-footer">
+          <div><div class="acc-thr-lbl">THRESHOLD</div><div class="acc-thr-val">&gt; 5% Delta</div></div>
+          <div class="acc-risk-col"><div class="acc-risk-lbl">RISK</div><span class="acc-badge risk-medium">Medium</span></div>
+        </div>
+      </div>
+
+      <!-- 4. STATUTORY VELOCITY -->
+      <div class="acc-card">
+        <div class="acc-icon cc-orange">
+          <svg width="18" height="18" fill="none" stroke="#f97316" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="acc-name" style="color:#f97316;">STATUTORY VELOCITY</div>
+        <div class="acc-desc">Delayed EFC/CWC clearances</div>
+        <div class="acc-footer">
+          <div><div class="acc-thr-lbl">THRESHOLD</div><div class="acc-thr-val">&gt; 24 Months</div></div>
+          <div class="acc-risk-col"><div class="acc-risk-lbl">RISK</div><span class="acc-badge risk-high">High</span></div>
+        </div>
+      </div>
+
+      <!-- 5. GEOMETRIC INTEGRITY -->
+      <div class="acc-card">
+        <div class="acc-icon cc-green">
+          <svg width="18" height="18" fill="none" stroke="#22c55e" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+            <circle cx="12" cy="12" r="4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="acc-name" style="color:#16a34a;">GEOMETRIC INTEGRITY</div>
+        <div class="acc-desc">CCA / GCA Ratio Anomaly</div>
+        <div class="acc-footer">
+          <div><div class="acc-thr-lbl">THRESHOLD</div><div class="acc-thr-val">&gt; 0.95</div></div>
+          <div class="acc-risk-col"><div class="acc-risk-lbl">RISK</div><span class="acc-badge risk-medium">Medium</span></div>
+        </div>
+      </div>
+
+      <!-- 6. REVISION VOLATILITY -->
+      <div class="acc-card">
+        <div class="acc-icon cc-blue">
+          <svg width="18" height="18" fill="none" stroke="#3b82f6" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </div>
+        <div class="acc-name" style="color:#3b82f6;">REVISION VOLATILITY</div>
+        <div class="acc-desc">Frequent baseline modifications</div>
+        <div class="acc-footer">
+          <div><div class="acc-thr-lbl">THRESHOLD</div><div class="acc-thr-val">&gt; 3 Revised</div></div>
+          <div class="acc-risk-col"><div class="acc-risk-lbl">RISK</div><span class="acc-badge risk-low">Low</span></div>
+        </div>
+      </div>
+
+      <!-- 7. EXECUTION SYNC -->
+      <div class="acc-card">
+        <div class="acc-icon cc-slate">
+          <svg width="18" height="18" fill="none" stroke="#64748b" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+          </svg>
+        </div>
+        <div class="acc-name" style="color:#475569;">EXECUTION SYNC</div>
+        <div class="acc-desc">Civil vs Mech execution lag</div>
+        <div class="acc-footer">
+          <div><div class="acc-thr-lbl">THRESHOLD</div><div class="acc-thr-val">&gt; 40% Gap</div></div>
+          <div class="acc-risk-col"><div class="acc-risk-lbl">RISK</div><span class="acc-badge risk-medium">Medium</span></div>
+        </div>
+      </div>
+
+      <!-- 8. LABOR CESS INTEGRITY -->
+      <div class="acc-card">
+        <div class="acc-icon cc-red">
+          <svg width="18" height="18" fill="none" stroke="#ef4444" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div class="acc-name" style="color:#ef4444;">LABOR CESS INTEGRITY</div>
+        <div class="acc-desc">BOCW 1% mismatch in MB</div>
+        <div class="acc-footer">
+          <div><div class="acc-thr-lbl">THRESHOLD</div><div class="acc-thr-val">Unverified</div></div>
+          <div class="acc-risk-col"><div class="acc-risk-lbl">RISK</div><span class="acc-badge risk-high">High</span></div>
+        </div>
+      </div>
+
+      <!-- 9. ADVANCE RECOVERY -->
+      <div class="acc-card">
+        <div class="acc-icon cc-orange">
+          <svg width="18" height="18" fill="none" stroke="#f97316" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+          </svg>
+        </div>
+        <div class="acc-name" style="color:#f97316;">ADVANCE RECOVERY</div>
+        <div class="acc-desc">Adv paid vs % Work Progress</div>
+        <div class="acc-footer">
+          <div><div class="acc-thr-lbl">THRESHOLD</div><div class="acc-thr-val">&gt; 6 Months</div></div>
+          <div class="acc-risk-col"><div class="acc-risk-lbl">RISK</div><span class="acc-badge risk-critical">Critical</span></div>
+        </div>
+      </div>
+
+      <!-- 10. A&F CEILING BUFFER -->
+      <div class="acc-card">
+        <div class="acc-icon cc-teal">
+          <svg width="18" height="18" fill="none" stroke="#14b8a6" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+          </svg>
+        </div>
+        <div class="acc-name" style="color:#0d9488;">A&amp;F CEILING BUFFER</div>
+        <div class="acc-desc">Estimates load vs A&amp;F</div>
+        <div class="acc-footer">
+          <div><div class="acc-thr-lbl">THRESHOLD</div><div class="acc-thr-val">&gt; 95% Area</div></div>
+          <div class="acc-risk-col"><div class="acc-risk-lbl">RISK</div><span class="acc-badge risk-medium">Medium</span></div>
+        </div>
+      </div>
+
+    </div><!-- /compliance-grid -->
+    """, unsafe_allow_html=True)
+    render_footer()
+    st.stop()
+
+
 def render_global_summary_page(view_key):
     st.markdown('<div class="dashboard-no-padding-trigger"></div>', unsafe_allow_html=True)
     dashboard_projects = build_contract_project_catalog()
-    
-    title = "All DPRs" if view_key == "GlobalDPRs" else "All Estimates"
-    desc = "Global list of all Detailed Project Reports." if view_key == "GlobalDPRs" else "Global list of all loaded Estimates."
-    
+
+    is_dpr = view_key == "GlobalDPRs"
+    title = "All DPRs" if is_dpr else "All Estimates"
+    desc  = "Global list of all Detailed Project Reports." if is_dpr else "Global list of all loaded Estimates."
+
     st.markdown(f"""
-      <div class="welcome-hero iidms-registry-header">
-          <div class="registry-header-left">
-              <a href="?nav=Dashboard" target="_self" class="iidms-back-link" style="margin-bottom:12px; display:inline-flex; align-items:center; gap:6px; color:#3b82f6; text-decoration:none; font-weight:600; font-size:14px;">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                  Back to Dashboard
-              </a>
-              <div class="welcome-dept-badge">INSTITUTIONAL RECORD HUB</div>
-              <h1>{title}</h1>
-              <p>{desc}</p>
-          </div>
+      <div class="global-summary-hdr">
+        <div class="global-summary-nav">
+          <a href="?nav=Dashboard" target="_self" class="global-back-link">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Dashboard
+          </a>
+          <span class="registry-badge" style="margin-bottom:0">INSTITUTIONAL RECORD HUB</span>
+        </div>
+        <div class="registry-title">{esc_html(title)}</div>
+        <div class="registry-subtitle">{esc_html(desc)}</div>
       </div>
     """, unsafe_allow_html=True)
 
@@ -3237,40 +3485,34 @@ def render_global_summary_page(view_key):
         render_footer()
         st.stop()
 
-    table_html = """
-<div class="iidms-registry-container">
-<table class="iidms-registry-table">
-<thead>
-<tr>
-<th>Project Name</th>
-<th>Status</th>
-<th>Action</th>
-</tr>
-</thead>
-<tbody>
-"""
+    rows_html = ""
     for p in dashboard_projects:
-        pname = esc_html(p.get("project_name", "Unknown Project"))
-        if view_key == "GlobalDPRs":
-            status = "DPR Tracked"
+        pname       = esc_html(p.get("project_name", "Unknown Project"))
+        action_url  = f"?nav=Main&dash_action=view_project&dash_project={quote(p.get('project_name', ''))}"
+        if is_dpr:
+            status_html = '<span class="gs-status-badge gs-badge-dpr">DPR TRACKED</span>'
         else:
-            count = p.get("estimate_count", 0)
-            status = f"{count} Estimates"
-            
-        action_url = f"?nav=Main&dash_action=view_project&dash_project={quote(pname)}"
-        table_html += f"""<tr>
-<td><div class="iidms-proj-name">{pname}</div></td>
-<td><span class="iidms-status-pill green">{status}</span></td>
-<td>
-<a href="{action_url}" target="_self" class="iidms-action-btn">View Project</a>
-</td>
-</tr>
-"""
-    table_html += """
-</tbody>
-</table>
-</div>
-"""
+            count = int(p.get("estimate_count") or 0)
+            label = f"{count} ESTIMATE{'S' if count != 1 else ''}"
+            status_html = f'<span class="gs-status-badge gs-badge-est">{label}</span>'
+        rows_html += (
+            f'<tr>'
+            f'<td class="td-project-identity"><div class="iidms-proj-name"><a href="{action_url}" target="_self">{pname}</a></div></td>'
+            f'<td>{status_html}</td>'
+            f'<td><a href="{action_url}" target="_self" class="iidms-open-btn">View Project &rsaquo;</a></td>'
+            f'</tr>'
+        )
+
+    table_html = (
+        '<table class="proj-table">'
+        '<thead><tr>'
+        '<th>PROJECT NAME</th>'
+        '<th style="width:200px;">STATUS</th>'
+        '<th style="width:170px;">ACTION</th>'
+        '</tr></thead>'
+        '<tbody>' + rows_html + '</tbody>'
+        '</table>'
+    )
     st.markdown(table_html, unsafe_allow_html=True)
     render_footer()
     st.stop()
@@ -3283,6 +3525,9 @@ if not is_admin:
 
     current_view_key = st.session_state.current_view
     
+    if current_view_key == "Analysis":
+        render_analysis_page()
+
     if current_view_key in ("GlobalDPRs", "GlobalEstimates"):
         render_global_summary_page(current_view_key)
         
@@ -3533,26 +3778,22 @@ if not is_admin:
                 <h3>Recent Updates</h3>
         """, unsafe_allow_html=True)
 
-        # Show recent projects as update entries
-        if dash_projects:
-            updates_html = ""
-            for p in dash_projects[:5]:
-                pname = esc_html(p.get('project_name', ''))
-                updates_html += f"""
-                <div class="iidms-update-item">
-                    <div class="iidms-update-left">
-                        <div class="iidms-update-name">{pname}</div>
-                    </div>
-                </div>
-                """
-            st.markdown(updates_html, unsafe_allow_html=True)
-        else:
-            st.markdown('<div style="padding:16px;color:#94a3b8;font-size:13px;">No recent updates.</div>', unsafe_allow_html=True)
+        st.markdown('<div style="padding:16px;color:#94a3b8;font-size:13px;">No recent updates.</div>', unsafe_allow_html=True)
 
         # End of top row cards
         st.markdown('</div></div>', unsafe_allow_html=True)
 
-        st.markdown("""
+        _dpr_done  = dash_stats.get("dpr_completed", 0)
+        _dpr_total = _dpr_done + dash_stats.get("dpr_incomplete", 0)
+        _dpr_val   = f"{_dpr_done}/{_dpr_total}" if _dpr_total else "0/0"
+
+        _est_done  = dash_stats.get("estimates_completed", 0)
+        _est_total = _est_done + dash_stats.get("estimates_incomplete", 0)
+        _est_val   = f"{_est_done}/{_est_total}" if _est_total else "0/0"
+
+        _con_total = dash_stats.get("contracts_completed", 0) + dash_stats.get("contracts_incomplete", 0)
+
+        st.markdown(f"""
         <!-- Work Progress Section -->
         <div class="iidms-dash-section-title">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
@@ -3564,15 +3805,15 @@ if not is_admin:
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 </div>
                 <div class="iidms-progress-label">DPR DOC STATUS</div>
-                <div class="iidms-progress-value">84%</div>
-                <div class="iidms-progress-sub">Verified Parameters</div>
+                <div class="iidms-progress-value">{_dpr_val}</div>
+                <div class="iidms-progress-sub">DPRs Filed</div>
             </div>
             <div class="iidms-progress-card">
                 <div class="iidms-progress-icon-wrap orange">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                 </div>
                 <div class="iidms-progress-label">ESTIMATE QUEUE</div>
-                <div class="iidms-progress-value">12/14</div>
+                <div class="iidms-progress-value">{_est_val}</div>
                 <div class="iidms-progress-sub">Estimates Loaded</div>
             </div>
             <div class="iidms-progress-card">
@@ -3580,11 +3821,13 @@ if not is_admin:
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
                 </div>
                 <div class="iidms-progress-label">CONTRACT LEDGER</div>
-                <div class="iidms-progress-value">48</div>
+                <div class="iidms-progress-value">{_con_total}</div>
                 <div class="iidms-progress-sub">Agreements Tracked</div>
             </div>
         </div>
+        """, unsafe_allow_html=True)
 
+        st.markdown("""
         <!-- Project Sections -->
         <div class="iidms-dash-section-title" style="margin-top: 40px;">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
@@ -3652,31 +3895,27 @@ if not is_admin:
         st.markdown('<div class="dashboard-no-padding-trigger"></div>', unsafe_allow_html=True)
 
         username_display = esc_html(st.session_state.username or "Officer")
-        _reg_search = (st.query_params.get("search") or "").strip()
-        st.markdown(f"""
-        <div class="registry-hdr">
-          <div class="registry-hdr-left">
-            <div class="registry-badge">INSTITUTIONAL RECORD HUB</div>
-            <div class="registry-title">Project Registry</div>
-            <div class="registry-subtitle">Centralized list of irrigation projects under audit review.</div>
-          </div>
-          <div class="registry-hdr-right">
-            <form class="registry-search-form" action="." method="get">
-              <input type="hidden" name="nav" value="Main" />
-              <div class="registry-search">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
-                </svg>
-                <input type="text" name="search" class="registry-search-input"
-                       placeholder="Filter by Project Name/Scheme..."
-                       value="{esc_html(_reg_search)}" />
+        _hdr_left, _hdr_mid, _hdr_right = st.columns([2.5, 2, 1])
+        with _hdr_left:
+            st.markdown("""
+              <div class="registry-hdr-left">
+                <div class="registry-badge">INSTITUTIONAL RECORD HUB</div>
+                <div class="registry-title">Project Registry</div>
+                <div class="registry-subtitle">Centralized list of irrigation projects under audit review.</div>
               </div>
-            </form>
-            <a href="./?nav=NewApp" target="_self" class="registry-add-btn">+ &nbsp;Register Project</a>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+        with _hdr_mid:
+            project_search_term = st.text_input(
+                "",
+                placeholder="Filter by Project Name/Scheme...",
+                key="project_name_search",
+                label_visibility="collapsed",
+            )
+        with _hdr_right:
+            st.markdown(
+                '<a href="./?nav=NewApp" target="_self" class="registry-add-btn">+ &nbsp;Register Project</a>',
+                unsafe_allow_html=True,
+            )
 
         render_flash_message()
 
@@ -3854,7 +4093,7 @@ if not is_admin:
         else:
             filtered_dashboard_projects = list(dashboard_projects)
 
-            _search_q = (st.query_params.get("search") or "").strip().lower()
+            _search_q = (st.session_state.get("project_name_search") or "").strip().lower()
             if _search_q:
                 filtered_dashboard_projects = [
                     p for p in filtered_dashboard_projects
@@ -3962,7 +4201,7 @@ if not is_admin:
                             tags += f'<span class="proj-type-tag">{esc_html(dpr_type)}</span>'
                         if dpr_location:
                             tags += f'<span class="proj-location-text">{esc_html(dpr_location)}</span>'
-                        identity_html += f'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:5px;">{tags}</div>'
+                        identity_html += f'<div class="proj-tags-row">{tags}</div>'
 
                     # Sanctioned value cell HTML
                     if dpr_amount:

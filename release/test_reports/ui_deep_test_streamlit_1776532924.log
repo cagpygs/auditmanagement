@@ -1,0 +1,48 @@
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8517
+  Network URL: http://192.168.29.209:8517
+  External URL: http://49.43.113.27:8517
+
+2026-04-18 22:52:09.738 
+`st.cache` is deprecated and will be removed soon. Please use one of Streamlit's new
+caching commands, `st.cache_data` or `st.cache_resource`. More information
+[in our docs](https://docs.streamlit.io/develop/concepts/architecture/caching).
+
+**Note**: The behavior of `st.cache` was updated in Streamlit 1.36 to the new caching
+logic used by `st.cache_data` and `st.cache_resource`. This might lead to some problems
+or unexpected behavior in certain edge cases.
+
+d:\canal_audit_system\crud.py:190: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(
+d:\canal_audit_system\crud.py:2056: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql("SELECT id, username, role, is_active, allowed_modules FROM users ORDER BY id", conn)
+d:\canal_audit_system\crud.py:2056: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql("SELECT id, username, role, is_active, allowed_modules FROM users ORDER BY id", conn)
+d:\canal_audit_system\crud.py:190: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(
+d:\canal_audit_system\crud.py:2056: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql("SELECT id, username, role, is_active, allowed_modules FROM users ORDER BY id", conn)
+d:\canal_audit_system\crud.py:190: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(
+d:\canal_audit_system\crud.py:2056: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql("SELECT id, username, role, is_active, allowed_modules FROM users ORDER BY id", conn)
+d:\canal_audit_system\crud.py:190: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(
+d:\canal_audit_system\crud.py:2056: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql("SELECT id, username, role, is_active, allowed_modules FROM users ORDER BY id", conn)
+d:\canal_audit_system\crud.py:190: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(
+d:\canal_audit_system\crud.py:2056: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql("SELECT id, username, role, is_active, allowed_modules FROM users ORDER BY id", conn)
+d:\canal_audit_system\crud.py:190: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(
+d:\canal_audit_system\crud.py:190: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(
+d:\canal_audit_system\crud.py:2056: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql("SELECT id, username, role, is_active, allowed_modules FROM users ORDER BY id", conn)
+d:\canal_audit_system\crud.py:2056: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql("SELECT id, username, role, is_active, allowed_modules FROM users ORDER BY id", conn)
+d:\canal_audit_system\crud.py:190: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(

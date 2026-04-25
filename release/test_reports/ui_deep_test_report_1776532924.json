@@ -1,0 +1,118 @@
+{
+  "base_url": "http://127.0.0.1:8517",
+  "temp_user": "autoui_1776532924",
+  "temp_password": "AutoUi#2026",
+  "project_used": "Upper Ganga Canal Rehabilitation",
+  "estimate_number": "AUTO-EST-1776532924",
+  "results": [
+    {
+      "step": "Boot app",
+      "ok": true,
+      "detail": "http://127.0.0.1:8517"
+    },
+    {
+      "step": "Admin login",
+      "ok": true,
+      "detail": "qa_admin"
+    },
+    {
+      "step": "Create User empty validation",
+      "ok": true,
+      "detail": "Error shown"
+    },
+    {
+      "step": "Create User submit",
+      "ok": true,
+      "detail": "autoui_1776532924 (module via UI=True)"
+    },
+    {
+      "step": "Assign module to temp user",
+      "ok": true,
+      "detail": "contract_management"
+    },
+    {
+      "step": "Manage Users tab",
+      "ok": false,
+      "detail": "Locator.wait_for: Timeout 12000ms exceeded.\nCall log:\n  - waiting for get_by_text(\"autoui_1776532924\").first to be visible\n    28 \u00d7 locator resolved to hidden <p>User 'autoui_1776532924' created successfully!</p>\n"
+    },
+    {
+      "step": "Review Applications tab",
+      "ok": true,
+      "detail": "All Users selected"
+    },
+    {
+      "step": "Admin logout",
+      "ok": true,
+      "detail": "Returned to login"
+    },
+    {
+      "step": "Operator login",
+      "ok": true,
+      "detail": "autoui_1776532924"
+    },
+    {
+      "step": "Start New Project flow",
+      "ok": true,
+      "detail": "Project=Upper Ganga Canal Rehabilitation"
+    },
+    {
+      "step": "DPR create/update and save",
+      "ok": true,
+      "detail": "Returned to project detail"
+    },
+    {
+      "step": "Create Estimate",
+      "ok": true,
+      "detail": "AUTO-EST-1776532924"
+    },
+    {
+      "step": "Open estimate group",
+      "ok": true,
+      "detail": "AUTO-EST-1776532924"
+    },
+    {
+      "step": "Contract section traversal",
+      "ok": true,
+      "detail": "sections=0, save_clicks=0, submit=disabled"
+    },
+    {
+      "step": "Estimate group Resume link",
+      "ok": false,
+      "detail": "Locator.click: Timeout 12000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"button\", name=re.compile(r\"<- Back\", re.IGNORECASE)).first\n"
+    },
+    {
+      "step": "Dashboard nav link",
+      "ok": true,
+      "detail": "Reached dashboard"
+    },
+    {
+      "step": "Project detail link from dashboard",
+      "ok": true,
+      "detail": "Upper Ganga Canal Rehabilitation"
+    },
+    {
+      "step": "Operator logout",
+      "ok": true,
+      "detail": "Returned to login"
+    },
+    {
+      "step": "Admin review open estimate",
+      "ok": false,
+      "detail": "Locator.click: Timeout 12000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"option\", name=re.compile(r\"autoui_1776532924\", re.IGNORECASE)).first\n"
+    },
+    {
+      "step": "Final admin logout",
+      "ok": true,
+      "detail": "Returned to login"
+    }
+  ],
+  "pass_count": 17,
+  "fail_count": 3,
+  "console_error_count": 0,
+  "page_error_count": 0,
+  "streamlit_traceback_count": 0,
+  "console_errors": [],
+  "page_errors": [],
+  "streamlit_error_lines": [],
+  "streamlit_log": "d:\\canal_audit_system\\release\\test_reports\\ui_deep_test_streamlit_1776532924.log"
+}

@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Preview — Analysis Page</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f8f9fb; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+
+  /* ══ TOP NAV ══ */
+  .top-nav {
+    position: sticky; top: 0; z-index: 999; height: 56px;
+    background: #fff; border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 28px;
+  }
+  .nav-left { display: flex; align-items: center; gap: 10px; }
+  .sidebar-toggle {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    gap: 4px; width: 36px; height: 36px; border: 1px solid #e2e8f0;
+    border-radius: 8px; background: #f8fafc; cursor: pointer; padding: 0; flex-shrink: 0;
+  }
+  .toggle-bar { display: block; width: 16px; height: 2px; background: #64748b; border-radius: 2px; }
+  .gov-badge {
+    display: inline-flex; align-items: center; font-size: 9px; font-weight: 700;
+    letter-spacing: 0.4px; padding: 5px 12px; border-radius: 4px;
+    background: #1e293b; color: #fff; white-space: nowrap;
+  }
+  .gov-badge-alt { background: #475569; }
+  .nav-title { font-size: 17px; font-weight: 700; color: #0f172a; margin-left: 6px; white-space: nowrap; }
+  .nav-sub { font-size: 11px; color: #94a3b8; font-weight: 500; margin-left: 6px; letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap; }
+  .nav-right { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+  .nav-search-box {
+    display: flex; align-items: center; gap: 8px; padding: 7px 18px;
+    border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; min-width: 220px;
+  }
+  .nav-search-icon { font-size: 14px; opacity: 0.4; }
+  .nav-search-text { font-size: 13px; color: #94a3b8; }
+  .nav-icon { font-size: 20px; opacity: 0.5; cursor: pointer; }
+
+  /* ══ PAGE BODY ══ */
+  .page-body { padding: 32px 40px; }
+
+  /* ── Page Header ── */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
+  .page-header-left {}
+  .page-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 10px; font-weight: 700; color: #3b82f6;
+    letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .page-badge svg { width: 12px; height: 12px; }
+  .page-title { font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 5px; }
+  .page-subtitle { font-size: 13px; color: #64748b; }
+  .system-status {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11px; font-weight: 700; color: #16a34a; letter-spacing: 0.8px; text-transform: uppercase;
+    padding: 6px 14px; background: #f0fdf4; border-radius: 20px; border: 1px solid #bbf7d0;
+    white-space: nowrap; margin-top: 4px;
+  }
+  .status-dot-green { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+
+  /* ══ PROJECT QUERY DARK CARD ══ */
+  .query-card {
+    background: #0d1117;
+    border-radius: 20px;
+    padding: 40px 44px;
+    margin-bottom: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .query-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .query-card-icon {
+    width: 36px; height: 36px; background: rgba(59,130,246,.18);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .query-card-icon svg { width: 18px; height: 18px; color: #60a5fa; stroke: #60a5fa; }
+  .query-card-title { font-size: 22px; font-weight: 800; color: #ffffff; }
+  .query-card-sub { font-size: 13px; color: #94a3b8; margin-bottom: 24px; line-height: 1.5; }
+
+  /* Input row */
+  .query-input-row {
+    display: flex; align-items: center; gap: 12px;
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 12px; padding: 6px 6px 6px 18px; margin-bottom: 16px;
+  }
+  .query-input-icon { color: #6e7681; flex-shrink: 0; }
+  .query-input-icon svg { width: 16px; height: 16px; }
+  .query-input-field {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-size: 14px; color: #c9d1d9; font-family: inherit;
+  }
+  .query-input-field::placeholder { color: #6e7681; }
+  .analyze-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: 8px; background: #2563eb;
+    color: #fff; font-size: 13px; font-weight: 700; border: none;
+    cursor: pointer; white-space: nowrap; font-family: inherit; flex-shrink: 0;
+    letter-spacing: 0.3px; transition: background .15s;
+  }
+  .analyze-btn:hover { background: #1d4ed8; }
+  .analyze-btn svg { width: 14px; height: 14px; }
+
+  /* Suggestion chips */
+  .query-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .query-chip {
+    display: inline-flex; align-items: center;
+    padding: 6px 14px; border-radius: 20px;
+    border: 1px solid #30363d; background: #161b22;
+    color: #94a3b8; font-size: 11px; cursor: pointer;
+    transition: border-color .15s, color .15s; white-space: nowrap;
+  }
+  .query-chip:hover { border-color: #3b82f6; color: #93c5fd; }
+
+  /* ══ COMPLIANCE SECTION ══ */
+  .compliance-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+  }
+  .compliance-title-row { display: flex; align-items: center; gap: 10px; }
+  .compliance-title-icon { color: #3b82f6; }
+  .compliance-title-icon svg { width: 20px; height: 20px; }
+  .compliance-title { font-size: 18px; font-weight: 700; color: #0f172a; }
+  .checking-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 10px; font-weight: 700; color: #2563eb; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .checking-dot { width: 7px; height: 7px; border-radius: 50%; background: #3b82f6; animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* Compliance grid */
+  .compliance-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px;
+  }
+  .cc-card {
+    background: #fff; border: 1px solid #e8ecf1;
+    border-radius: 14px; padding: 20px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  }
+  .cc-icon-wrap {
+    width: 36px; height: 36px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+  }
+  .cc-icon-wrap svg { width: 18px; height: 18px; }
+  /* icon colours */
+  .cc-red    { background: #fef2f2; } .cc-red    svg { stroke: #ef4444; }
+  .cc-yellow { background: #fefce8; } .cc-yellow svg { stroke: #ca8a04; }
+  .cc-blue   { background: #eff6ff; } .cc-blue   svg { stroke: #3b82f6; }
+  .cc-orange { background: #fff7ed; } .cc-orange svg { stroke: #f97316; }
+  .cc-green  { background: #f0fdf4; } .cc-green  svg { stroke: #22c55e; }
+  .cc-purple { background: #f5f3ff; } .cc-purple svg { stroke: #8b5cf6; }
+  .cc-teal   { background: #f0fdfa; } .cc-teal   svg { stroke: #14b8a6; }
+  .cc-slate  { background: #f8fafc; } .cc-slate  svg { stroke: #64748b; }
+
+  .cc-name { font-size: 11px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 4px; }
+  .cc-name.red    { color: #ef4444; } .cc-name.yellow { color: #ca8a04; }
+  .cc-name.blue   { color: #3b82f6; } .cc-name.orange { color: #f97316; }
+  .cc-name.green  { color: #16a34a; } .cc-name.purple { color: #7c3aed; }
+  .cc-name.teal   { color: #0d9488; } .cc-name.slate  { color: #475569; }
+
+  .cc-desc { font-size: 11px; color: #94a3b8; margin-bottom: 16px; line-height: 1.4; }
+
+  .cc-footer { display: flex; align-items: center; justify-content: space-between; }
+  .cc-threshold-wrap {}
+  .cc-threshold-label { font-size: 9px; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+  .cc-threshold-val { font-size: 12px; font-weight: 700; color: #0f172a; }
+  .cc-risk-wrap { text-align: right; }
+  .cc-risk-label { font-size: 9px; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+  .cc-risk-badge {
+    display: inline-block; padding: 2px 9px; border-radius: 20px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+  }
+  .risk-critical { background: #fef2f2; color: #dc2626; }
+  .risk-high     { background: #fff7ed; color: #c2410c; }
+  .risk-medium   { background: #eff6ff; color: #1d4ed8; }
+  .risk-low      { background: #f0fdf4; color: #15803d; }
+</style>
+</head>
+<body>
+
+<!-- ══ TOP NAV ══ -->
+<nav class="top-nav">
+  <div class="nav-left">
+    <button class="sidebar-toggle">
+      <span class="toggle-bar"></span><span class="toggle-bar"></span><span class="toggle-bar"></span>
+    </button>
+    <span class="gov-badge">GOVERNMENT OF UTTAR PRADESH</span>
+    <span class="gov-badge gov-badge-alt">CAG OF INDIA</span>
+    <span class="nav-title">Irrigation Data Management System</span>
+    <span class="nav-sub">GOVERNMENT RESOURCE</span>
+  </div>
+  <div class="nav-right">
+    <div class="nav-search-box">
+      <span class="nav-search-icon">🔍</span>
+      <span class="nav-search-text">Search projects...</span>
+    </div>
+    <span class="nav-icon">🔔</span>
+    <span class="nav-icon">⚙️</span>
+  </div>
+</nav>
+
+<!-- ══ PAGE BODY ══ -->
+<div class="page-body">
+
+  <!-- ── Page Header ── -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-badge">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        PROJECT CHECKS
+      </div>
+      <div class="page-title">Project Analysis &amp; Checks</div>
+      <div class="page-subtitle">Verify data and check for issues across the project list.</div>
+    </div>
+    <div class="system-status">
+      <span class="status-dot-green"></span> SYSTEM ACTIVE
+    </div>
+  </div>
+
+  <!-- ══ PROJECT QUERY DARK CARD ══ -->
+  <div class="query-card">
+    <div class="query-card-header">
+      <div class="query-card-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <div class="query-card-title">Project Query</div>
+    </div>
+    <div class="query-card-sub">
+      Query across the entire project list using simple words. The system will check for errors between reports and estimates.
+    </div>
+
+    <!-- Input row -->
+    <div class="query-input-row">
+      <div class="query-input-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+        </svg>
+      </div>
+      <input class="query-input-field" type="text"
+             placeholder="Compare DPR sanctioned cost vs actual agreement value for a..." />
+      <button class="analyze-btn">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        ANALYZE
+      </button>
+    </div>
+
+    <!-- Suggestion chips -->
+    <div class="query-chips">
+      <span class="query-chip">Compare DPR sanctioned cost vs actual agreement value for all Division IV projects.</span>
+      <span class="query-chip">Identify discrepancies between BOCW payments and scheduled labor components in Sharda Modernization.</span>
+      <span class="query-chip">Retrieve all revised technical sanctions where the increase exceeds 20% of A&amp;F</span>
+      <span class="query-chip">Cross-verify MB entries with site inspection reports for Upper Ganga project.</span>
+    </div>
+  </div>
+
+  <!-- ══ PROJECT COMPLIANCE CHECKS ══ -->
+  <div class="compliance-header">
+    <div class="compliance-title-row">
+      <div class="compliance-title-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+      </div>
+      <div class="compliance-title">Project Compliance Checks</div>
+    </div>
+    <div class="checking-badge">
+      <span class="checking-dot"></span> CHECKING PROJECTS
+    </div>
+  </div>
+
+  <div class="compliance-grid">
+
+    <!-- 1. EXPENDITURE INTENSITY -->
+    <div class="cc-card">
+      <div class="cc-icon-wrap cc-red">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <div class="cc-name red">EXPENDITURE INTENSITY</div>
+      <div class="cc-desc">Net Paid vs Sanctioned Budget</div>
+      <div class="cc-footer">
+        <div class="cc-threshold-wrap">
+          <div class="cc-threshold-label">THRESHOLD</div>
+          <div class="cc-threshold-val">&gt; 100%</div>
+        </div>
+        <div class="cc-risk-wrap">
+          <div class="cc-risk-label">RISK</div>
+          <span class="cc-risk-badge risk-critical">Critical</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. AGREEMENT SPLITTING -->
+    <div class="cc-card">
+      <div class="cc-icon-wrap cc-yellow">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+        </svg>
+      </div>
+      <div class="cc-name yellow">AGREEMENT SPLITTING</div>
+      <div class="cc-desc">Fragmented contracts in same ID</div>
+      <div class="cc-footer">
+        <div class="cc-threshold-wrap">
+          <div class="cc-threshold-label">THRESHOLD</div>
+          <div class="cc-threshold-val">Detected</div>
+        </div>
+        <div class="cc-risk-wrap">
+          <div class="cc-risk-label">RISK</div>
+          <span class="cc-risk-badge risk-high">High</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. TS COMPLIANCE -->
+    <div class="cc-card">
+      <div class="cc-icon-wrap cc-blue">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+      </div>
+      <div class="cc-name blue">TS COMPLIANCE</div>
+      <div class="cc-desc">Agreements &gt; TS Value</div>
+      <div class="cc-footer">
+        <div class="cc-threshold-wrap">
+          <div class="cc-threshold-label">THRESHOLD</div>
+          <div class="cc-threshold-val">&gt; 5% Delta</div>
+        </div>
+        <div class="cc-risk-wrap">
+          <div class="cc-risk-label">RISK</div>
+          <span class="cc-risk-badge risk-medium">Medium</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. STATUTORY VELOCITY -->
+    <div class="cc-card">
+      <div class="cc-icon-wrap cc-orange">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <div class="cc-name orange">STATUTORY VELOCITY</div>
+      <div class="cc-desc">Delayed EFC/CWC clearances</div>
+      <div class="cc-footer">
+        <div class="cc-threshold-wrap">
+          <div class="cc-threshold-label">THRESHOLD</div>
+          <div class="cc-threshold-val">&gt; 24 Months</div>
+        </div>
+        <div class="cc-risk-wrap">
+          <div class="cc-risk-label">RISK</div>
+          <span class="cc-risk-badge risk-high">High</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. GEOMETRIC INTEGRITY -->
+    <div class="cc-card">
+      <div class="cc-icon-wrap cc-green">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <circle cx="12" cy="12" r="4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="cc-name green">GEOMETRIC INTEGRITY</div>
+      <div class="cc-desc">CCA / GCA Ratio Anomaly</div>
+      <div class="cc-footer">
+        <div class="cc-threshold-wrap">
+          <div class="cc-threshold-label">THRESHOLD</div>
+          <div class="cc-threshold-val">&gt; 0.95</div>
+        </div>
+        <div class="cc-risk-wrap">
+          <div class="cc-risk-label">RISK</div>
+          <span class="cc-risk-badge risk-medium">Medium</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. REVISION VOLATILITY -->
+    <div class="cc-card">
+      <div class="cc-icon-wrap cc-blue">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </div>
+      <div class="cc-name blue">REVISION VOLATILITY</div>
+      <div class="cc-desc">Frequent baseline modifications</div>
+      <div class="cc-footer">
+        <div class="cc-threshold-wrap">
+          <div class="cc-threshold-label">THRESHOLD</div>
+          <div class="cc-threshold-val">&gt; 3 Revised</div>
+        </div>
+        <div class="cc-risk-wrap">
+          <div class="cc-risk-label">RISK</div>
+          <span class="cc-risk-badge risk-low">Low</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. EXECUTION SYNC -->
+    <div class="cc-card">
+      <div class="cc-icon-wrap cc-slate">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+        </svg>
+      </div>
+      <div class="cc-name slate">EXECUTION SYNC</div>
+      <div class="cc-desc">Civil vs Mech execution lag</div>
+      <div class="cc-footer">
+        <div class="cc-threshold-wrap">
+          <div class="cc-threshold-label">THRESHOLD</div>
+          <div class="cc-threshold-val">&gt; 40% Gap</div>
+        </div>
+        <div class="cc-risk-wrap">
+          <div class="cc-risk-label">RISK</div>
+          <span class="cc-risk-badge risk-medium">Medium</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. LABOR CESS INTEGRITY -->
+    <div class="cc-card">
+      <div class="cc-icon-wrap cc-red">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+      </div>
+      <div class="cc-name red">LABOR CESS INTEGRITY</div>
+      <div class="cc-desc">BOCW 1% mismatch in MB</div>
+      <div class="cc-footer">
+        <div class="cc-threshold-wrap">
+          <div class="cc-threshold-label">THRESHOLD</div>
+          <div class="cc-threshold-val">Unverified</div>
+        </div>
+        <div class="cc-risk-wrap">
+          <div class="cc-risk-label">RISK</div>
+          <span class="cc-risk-badge risk-high">High</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. ADVANCE RECOVERY -->
+    <div class="cc-card">
+      <div class="cc-icon-wrap cc-orange">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+        </svg>
+      </div>
+      <div class="cc-name orange">ADVANCE RECOVERY</div>
+      <div class="cc-desc">Adv paid vs % Work Progress</div>
+      <div class="cc-footer">
+        <div class="cc-threshold-wrap">
+          <div class="cc-threshold-label">THRESHOLD</div>
+          <div class="cc-threshold-val">&gt; 6 Months</div>
+        </div>
+        <div class="cc-risk-wrap">
+          <div class="cc-risk-label">RISK</div>
+          <span class="cc-risk-badge risk-critical">Critical</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. A&F CEILING BUFFER -->
+    <div class="cc-card">
+      <div class="cc-icon-wrap cc-teal">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+        </svg>
+      </div>
+      <div class="cc-name teal">A&amp;F CEILING BUFFER</div>
+      <div class="cc-desc">Estimates load vs A&amp;F</div>
+      <div class="cc-footer">
+        <div class="cc-threshold-wrap">
+          <div class="cc-threshold-label">THRESHOLD</div>
+          <div class="cc-threshold-val">&gt; 95% Area</div>
+        </div>
+        <div class="cc-risk-wrap">
+          <div class="cc-risk-label">RISK</div>
+          <span class="cc-risk-badge risk-medium">Medium</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /compliance-grid -->
+
+</div><!-- /page-body -->
+</body>
+</html>

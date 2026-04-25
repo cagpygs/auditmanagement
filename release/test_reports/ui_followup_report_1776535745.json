@@ -1,0 +1,82 @@
+{
+  "results": [
+    {
+      "step": "Boot app",
+      "ok": true,
+      "detail": "http://127.0.0.1:8521"
+    },
+    {
+      "step": "Operator login",
+      "ok": true,
+      "detail": "autoui_1776532924"
+    },
+    {
+      "step": "Open estimate group",
+      "ok": true,
+      "detail": "AUTO-EST-1776532924"
+    },
+    {
+      "step": "Enter contract form",
+      "ok": true,
+      "detail": "Start New Contract"
+    },
+    {
+      "step": "Traverse and save contract sections",
+      "ok": true,
+      "detail": "sections=7, saves=7, submit=disabled, submitted=False"
+    },
+    {
+      "step": "Return to estimate group",
+      "ok": false,
+      "detail": "nothing to repeat at position 0"
+    },
+    {
+      "step": "Estimate group View link",
+      "ok": false,
+      "detail": "View link not found"
+    },
+    {
+      "step": "Estimate group Upload flow",
+      "ok": false,
+      "detail": "Upload link not found"
+    },
+    {
+      "step": "Operator logout",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "Admin login",
+      "ok": true,
+      "detail": "qa_admin"
+    },
+    {
+      "step": "Admin select applicant",
+      "ok": true,
+      "detail": "autoui_1776532924"
+    },
+    {
+      "step": "Admin open estimate group",
+      "ok": true,
+      "detail": "AUTO-EST-1776532924"
+    },
+    {
+      "step": "Admin contract View link",
+      "ok": false,
+      "detail": "Locator.wait_for: Timeout 25000ms exceeded.\nCall log:\n  - waiting for get_by_text(\"Application\").first to be visible\n"
+    },
+    {
+      "step": "Final admin logout",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "pass_count": 10,
+  "fail_count": 4,
+  "console_error_count": 0,
+  "page_error_count": 0,
+  "traceback_count": 0,
+  "console_errors": [],
+  "page_errors": [],
+  "streamlit_log": "d:\\canal_audit_system\\release\\test_reports\\ui_followup_streamlit_1776535745.log"
+}

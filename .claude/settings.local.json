@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Start-Process \"d:\\\\canal_audit_system\\\\preview_registry_header2.html\")"
+    ]
+  }
+}

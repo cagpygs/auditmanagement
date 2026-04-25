@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Preview — Full Page with Blue Hover on Open Project</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f8f9fb;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  /* ══ TOP NAVIGATION BAR ══ */
+  .top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    height: 56px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+  }
+  .nav-left { display: flex; align-items: center; gap: 10px; }
+  .sidebar-toggle {
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: center; gap: 4px; width: 36px; height: 36px;
+    border: 1px solid #e2e8f0; border-radius: 8px;
+    background: #f8fafc; cursor: pointer; padding: 0; flex-shrink: 0; margin-right: 4px;
+  }
+  .toggle-bar { display: block; width: 16px; height: 2px; background: #64748b; border-radius: 2px; }
+  .gov-badge {
+    display: inline-flex; align-items: center;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.4px;
+    padding: 5px 12px; border-radius: 4px; background: #1e293b; color: #fff; white-space: nowrap;
+  }
+  .gov-badge-alt { background: #475569; }
+  .nav-title { font-size: 17px; font-weight: 700; color: #0f172a; margin-left: 6px; white-space: nowrap; }
+  .nav-sub   { font-size: 11px; color: #94a3b8; font-weight: 500; margin-left: 6px; letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap; }
+  .nav-right { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+  .nav-search-box {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 18px; border: 1px solid #e2e8f0; border-radius: 8px;
+    background: #f8fafc; min-width: 220px;
+  }
+  .nav-search-icon { font-size: 14px; opacity: 0.4; }
+  .nav-search-text { font-size: 13px; color: #94a3b8; }
+  .nav-icon { font-size: 20px; opacity: 0.4; cursor: pointer; }
+
+  /* ══ PAGE BODY ══ */
+  .page-body { padding: 32px 40px; }
+
+  /* ── 3-column Registry Header ── */
+  .col-row {
+    display: flex; align-items: flex-end;
+    gap: 12px; margin-bottom: 20px; width: 100%;
+  }
+  .col-left  { flex: 2.5; min-width: 0; }
+  .col-mid   { flex: 2;   min-width: 0; }
+  .col-right { flex: 1;   min-width: 0; }
+
+  .registry-badge {
+    font-size: 10px; font-weight: 700; color: #94a3b8;
+    letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px;
+  }
+  .registry-title {
+    font-size: 28px; font-weight: 800; color: #0f172a;
+    line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 4px;
+  }
+  .registry-subtitle { font-size: 13px; color: #64748b; }
+
+  .registry-search {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 16px; border: 1px solid #e2e8f0;
+    border-radius: 8px; background: #fff; height: 42px; width: 100%;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .registry-search:focus-within { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148,163,184,.12); }
+  .registry-search svg { color: #94a3b8; flex-shrink: 0; }
+  .registry-search input {
+    border: none; outline: none; background: transparent;
+    font-size: 14px; color: #334155; font-family: inherit; width: 100%;
+  }
+  .registry-search input::placeholder { color: #94a3b8; font-size: 13px; }
+
+  .registry-add-btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 22px; border-radius: 8px; background: #1e293b;
+    color: #fff; font-size: 14px; font-weight: 600; text-decoration: none;
+    white-space: nowrap; border: none; font-family: inherit; height: 42px;
+    width: 100%; cursor: pointer; transition: background .15s;
+  }
+  .registry-add-btn:hover { background: #0f172a; }
+
+  /* ── Table ── */
+  .proj-table {
+    width: 100%; border-collapse: collapse; background: #fff;
+    border: 1px solid #e8ecf1; border-radius: 12px;
+    overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  }
+  .proj-table thead th {
+    padding: 13px 18px; font-size: 10px; font-weight: 700;
+    color: #94a3b8; letter-spacing: 1.2px; text-transform: uppercase;
+    text-align: left; border-bottom: 1px solid #f1f5f9; white-space: nowrap;
+  }
+  .proj-table tbody td {
+    padding: 18px 18px; border-bottom: 1px solid #f1f5f9;
+    font-size: 14px; color: #334155; vertical-align: middle;
+  }
+  .proj-table tbody tr:last-child td { border-bottom: none; }
+  .proj-table tbody tr:hover { background: #f8fafc; }
+
+  /* Project identity */
+  .iidms-proj-name a { font-size: 15px; font-weight: 700; color: #0f172a; text-decoration: none; }
+  .iidms-proj-name a:hover { color: #2563eb; }
+  .proj-tags-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 5px; }
+  .proj-type-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; background: #1e293b;
+    color: #fff; text-transform: uppercase;
+  }
+  .proj-loc { font-size: 12px; color: #64748b; }
+
+  /* Sanctioned value */
+  .td-sanction-amount { font-size: 15px; font-weight: 700; color: #0f172a; }
+  .td-sanction-label  { font-size: 10px; font-weight: 600; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-top: 3px; }
+  .td-sanction-empty  { font-size: 14px; color: #cbd5e1; }
+
+  /* Health badges */
+  .health-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .health-dot   { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .health-red    { background: #fef2f2; color: #dc2626; } .health-red    .health-dot { background: #ef4444; }
+  .health-green  { background: #f0fdf4; color: #15803d; } .health-green  .health-dot { background: #22c55e; }
+  .health-orange { background: #fff7ed; color: #c2410c; } .health-orange .health-dot { background: #f97316; }
+
+  /* Status badges */
+  .iidms-status-ongoing { display: inline-block; padding: 4px 12px; border-radius: 6px; background: #fff7ed; color: #c2410c; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .iidms-status-done    { display: inline-block; padding: 4px 12px; border-radius: 6px; background: #f0fdf4; color: #15803d; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  /* ★ Open Project button — hover turns BLUE ★ */
+  .iidms-open-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px; border: 1px solid #e2e8f0;
+    border-radius: 8px; background: #fff;
+    color: #334155; font-size: 13px; font-weight: 600;
+    text-decoration: none; transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .iidms-open-btn:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+  }
+
+  /* Helper to show hover state in preview */
+  .iidms-open-btn.demo-hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+  }
+
+  .preview-note {
+    font-size: 12px; color: #94a3b8; font-style: italic;
+    margin-bottom: 16px; padding: 8px 14px; background: #f1f5f9;
+    border-radius: 6px; border-left: 3px solid #2563eb;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ TOP NAV ══ -->
+<nav class="top-nav">
+  <div class="nav-left">
+    <button class="sidebar-toggle">
+      <span class="toggle-bar"></span>
+      <span class="toggle-bar"></span>
+      <span class="toggle-bar"></span>
+    </button>
+    <span class="gov-badge">GOVERNMENT OF UTTAR PRADESH</span>
+    <span class="gov-badge gov-badge-alt">CAG OF INDIA</span>
+    <span class="nav-title">Irrigation Data Management System</span>
+    <span class="nav-sub">GOVERNMENT RESOURCE</span>
+  </div>
+  <div class="nav-right">
+    <div class="nav-search-box">
+      <span class="nav-search-icon">🔍</span>
+      <span class="nav-search-text">Search projects...</span>
+    </div>
+    <span class="nav-icon">🔔</span>
+    <span class="nav-icon">⚙️</span>
+  </div>
+</nav>
+
+<!-- ══ PAGE BODY ══ -->
+<div class="page-body">
+
+  <p class="preview-note">
+    ★ PREVIEW — Row 1 shows the button in its HOVER state (blue). Hover over any button to see the effect live.
+  </p>
+
+  <!-- Registry Header -->
+  <div class="col-row">
+    <div class="col-left">
+      <div class="registry-badge">INSTITUTIONAL RECORD HUB</div>
+      <div class="registry-title">Project Registry</div>
+      <div class="registry-subtitle">Centralized list of irrigation projects under audit review.</div>
+    </div>
+    <div class="col-mid">
+      <div class="registry-search">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+        </svg>
+        <input type="text" placeholder="Filter by Project Name/Scheme..." />
+      </div>
+    </div>
+    <div class="col-right">
+      <a href="#" class="registry-add-btn">+ &nbsp;Register Project</a>
+    </div>
+  </div>
+
+  <!-- Project Table -->
+  <table class="proj-table">
+    <thead>
+      <tr>
+        <th>Project Identity &amp; Location</th>
+        <th style="width:180px;">Sanctioned Value</th>
+        <th style="width:160px;">Project Health</th>
+        <th style="width:120px;">Status</th>
+        <th style="width:160px;">Audit Workspace</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Row 1: button shown in HOVER/BLUE state as demo -->
+      <tr>
+        <td>
+          <div class="iidms-proj-name"><a href="#">Koyna Canal Rehabilitation-IV</a></div>
+          <div class="proj-tags-row">
+            <span class="proj-type-tag">AIBP</span>
+            <span class="proj-loc">Nagpur</span>
+          </div>
+        </td>
+        <td>
+          <div class="td-sanction-amount">&#8377;1,24,00,00,000</div>
+          <div class="td-sanction-label">Approved Budget</div>
+        </td>
+        <td><span class="health-badge health-red"><span class="health-dot"></span>HEALTH: 68%</span></td>
+        <td><span class="iidms-status-ongoing">ONGOING</span></td>
+        <td><a href="#" class="iidms-open-btn demo-hover">Open Project &rsaquo;</a></td>
+      </tr>
+      <!-- Row 2: default state -->
+      <tr>
+        <td>
+          <div class="iidms-proj-name"><a href="#">Purna River Modernization Project</a></div>
+          <div class="proj-tags-row">
+            <span class="proj-type-tag">PMKSY</span>
+            <span class="proj-loc">Akola</span>
+          </div>
+        </td>
+        <td>
+          <div class="td-sanction-amount">&#8377;85,00,00,000</div>
+          <div class="td-sanction-label">Approved Budget</div>
+        </td>
+        <td><span class="health-badge health-green"><span class="health-dot"></span>HEALTH: 92%</span></td>
+        <td><span class="iidms-status-ongoing">ONGOING</span></td>
+        <td><a href="#" class="iidms-open-btn">Open Project &rsaquo;</a></td>
+      </tr>
+      <!-- Row 3: default state -->
+      <tr>
+        <td>
+          <div class="iidms-proj-name"><a href="#">Saryu Canal Project</a></div>
+          <div class="proj-tags-row">
+            <span class="proj-type-tag">Major Irrigation</span>
+            <span class="proj-loc">Gorakhpur</span>
+          </div>
+        </td>
+        <td>
+          <div class="td-sanction-amount">&#8377;100</div>
+          <div class="td-sanction-label">Approved Budget</div>
+        </td>
+        <td><span class="health-badge health-green"><span class="health-dot"></span>HEALTH: 98%</span></td>
+        <td><span class="iidms-status-ongoing">ONGOING</span></td>
+        <td><a href="#" class="iidms-open-btn">Open Project &rsaquo;</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+</div>
+</body>
+</html>
