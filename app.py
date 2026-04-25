@@ -153,6 +153,30 @@ def load_css(file_name):
 load_css('style.css')
 load_css('iidms_override.css')
 
+# Copy each file-uploader's label text onto its "Browse files" button.
+# Uses components.html so the script runs inside an iframe with window.parent
+# access (same origin), letting it patch the Streamlit parent DOM reliably.
+import streamlit.components.v1 as components
+components.html("""
+<script>
+(function(){
+  var p = window.parent.document;
+  var timer;
+  function patch() {
+    p.querySelectorAll('[data-testid="stFileUploader"]').forEach(function(u){
+      var lbl = u.querySelector('[data-testid="stWidgetLabel"] p');
+      var btn = u.querySelector('[data-testid="stFileUploaderDropzone"] button');
+      if(lbl && btn && btn.innerText.trim() !== lbl.innerText.trim())
+        btn.innerText = lbl.innerText.trim();
+    });
+  }
+  function schedule(){ clearTimeout(timer); timer = setTimeout(patch, 200); }
+  schedule();
+  new window.parent.MutationObserver(schedule).observe(p.body, {childList:true, subtree:true});
+})();
+</script>
+""", height=0)
+
 
 # =====================================================
 # ================= FOOTER ============================
@@ -1735,7 +1759,6 @@ def render_create_dpr_page(flow_data=None):
     existing_dpr = get_project_dpr(user_id, project_name, module="contract_management") or {}
     existing_fields = get_existing_dpr_fields(existing_dpr)
 
-    # Parse existing payload early â€” needed for upload status display
     existing_payload_raw = existing_dpr.get("dpr_form_data")
     existing_payload = {}
     if isinstance(existing_payload_raw, dict):
@@ -1749,6 +1772,8 @@ def render_create_dpr_page(flow_data=None):
             existing_payload = {}
 
     field_configs = get_dpr_field_configs()
+    cfg_map = {c["label"]: c for c in field_configs if c.get("type") != "section"}
+
     for cfg in field_configs:
         label = cfg["label"]
         if cfg.get("type") == "section":
@@ -1780,49 +1805,8 @@ def render_create_dpr_page(flow_data=None):
         else:
             st.session_state[state_key] = "" if existing_value in (None, "") else str(existing_value)
 
-    st.markdown("""
-    <div class="form-section-heading">&#128196; Project DPR &mdash; Base Information</div>
-    <div class="form-section-sub">All fields below are optional. Fill only the details currently available.</div>
-    """, unsafe_allow_html=True)
-
-    BASE_LABELS = {
-        "Category of Project", "Type of Project", "Location of Head Works",
-        "Date of Investement clearance by GOI", "Date of CWC clearence",
-        "Date of approval of EFC", "Districts covered", "Gross Command area", "CCA",
-        "Irrigation Potential in RABI", "Irrigation Potential in KHARIF",
-        "Requirement of Water for project", "Availability of Water against the requirement",
-        "Pre-Project Crop Pattern in RABI", "Pre-Project Crop Pattern in KHARIF",
-        "Post-Project Crop Pattern in RABI", "Post-Project Crop Pattern in KHARIF",
-    }
-
-    col1, col2 = st.columns(2)
     form_values = {}
-    for idx, cfg in enumerate(field_configs):
-        label = cfg["label"]
-        ftype = cfg["type"]
-        if ftype == "section":
-            continue
-        if label not in BASE_LABELS:
-            continue  # revisions handled separately below
-        state_key = f"dpr_form_{_safe_key(label)}_{safe_project}"
-        target_col = col1 if idx % 2 == 0 else col2
-        with target_col:
-            if ftype == "select":
-                value = st.selectbox(label, options=cfg.get("options", []), key=state_key)
-            elif ftype == "date":
-                value = st.date_input(label, key=state_key)
-            elif ftype == "multiselect":
-                value = st.multiselect(label, options=cfg.get("options", []), key=state_key)
-            else:
-                value = st.text_input(label, key=state_key)
-        form_values[label] = value
-
-    # Base DPR uploads
-    st.markdown("<hr class='form-section-divider'>", unsafe_allow_html=True)
-    st.markdown("""
-    <div class="form-section-heading">&#128206; Base DPR Documents</div>
-    <div class="form-section-sub">All uploads are optional. You can upload documents now or later.</div>
-    """, unsafe_allow_html=True)
+    upload_inputs = {}
 
     upload_configs = [
         {"key": "upload_complete_dpr", "label": "Final Approved DPR"},
@@ -1832,83 +1816,231 @@ def render_create_dpr_page(flow_data=None):
         {"key": "survey_reports", "label": "Survey Reports"},
     ]
 
-    upload_inputs = {}
-    upc1, upc2 = st.columns(2)
-    for ci, cfg in enumerate(upload_configs):
-        target_col = upc1 if ci % 2 == 0 else upc2
-        with target_col:
-            upload_inputs[cfg["key"]] = st.file_uploader(
-                cfg["label"],
-                type=["pdf", "doc", "docx", "xlsx", "xls", "jpg", "jpeg", "png"],
-                key=f"dpr_upload_{cfg['key']}_{safe_project}",
-            )
-            file_name_key = f"{cfg['key']}_file_name"
-            existing_file_name = existing_payload.get(file_name_key)
-            if cfg["key"] == "upload_complete_dpr" and not existing_file_name:
-                existing_file_name = existing_dpr.get("dpr_file_name")
-            if existing_file_name:
-                st.caption(f"On record: {existing_file_name}")
+    def _render_field(config_label, display_label):
+        cfg = cfg_map.get(config_label)
+        if not cfg:
+            return None
+        sk = f"dpr_form_{_safe_key(config_label)}_{safe_project}"
+        ftype = cfg["type"]
+        if ftype == "select":
+            val = st.selectbox(display_label, options=cfg.get("options", []), key=sk)
+        elif ftype == "date":
+            val = st.date_input(display_label, key=sk)
+        elif ftype == "multiselect":
+            val = st.multiselect(display_label, options=cfg.get("options", []), key=sk)
+        else:
+            val = st.text_input(display_label, key=sk)
+        form_values[config_label] = val
+        return val
+
+    # ── CARD HEADER ──
+    hdr_col, up_col, save_col = st.columns([5, 2.2, 2])
+    with hdr_col:
+        st.markdown("""
+        <div class="dpr-hdr-title">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Detailed Project Report (DPR)
+        </div>
+        <div class="dpr-hdr-sub">Official project scope and approved parameters.</div>
+        """, unsafe_allow_html=True)
+    with up_col:
+        upload_inputs["upload_complete_dpr"] = st.file_uploader(
+            "Upload Original DPR",
+            type=["pdf", "doc", "docx", "xlsx", "xls", "jpg", "jpeg", "png"],
+            key=f"dpr_upload_upload_complete_dpr_{safe_project}",
+        )
+        existing_dpr_file = existing_payload.get("upload_complete_dpr_file_name") or existing_dpr.get("dpr_file_name")
+        if existing_dpr_file:
+            st.caption(f"On record: {existing_dpr_file}")
+    with save_col:
+        st.markdown('<div style="height:28px"></div>', unsafe_allow_html=True)
+        save_clicked_top = st.button(
+            "\U0001f4be Save Documentation",
+            key=f"btn_save_dpr_top_{safe_project}",
+            use_container_width=True,
+            type="primary",
+        )
+
+    st.markdown('<div style="height:16px"></div>', unsafe_allow_html=True)
+
+    # ── TWO-COLUMN FORM ──
+    left_col, right_col = st.columns(2, gap="large")
+
+    with left_col:
+        st.markdown("""
+        <div class="dpr-section-hd">
+            <div class="dpr-section-hd-icon">
+                <svg width="10" height="10" fill="none" stroke="#3b82f6" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                </svg>
+            </div>
+            <span class="dpr-section-hd-text">Administrative Classification</span>
+        </div>
+        """, unsafe_allow_html=True)
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            _render_field("Category of Project", "Category of Project")
+        with rc2:
+            _render_field("Type of Project", "Type of Project")
+        _render_field("Location of Head Works", "Location of Head Works")
+
+        st.markdown("""
+        <div class="dpr-section-hd" style="margin-top:22px">
+            <div class="dpr-section-hd-icon">
+                <svg width="10" height="10" fill="none" stroke="#3b82f6" stroke-width="2.5" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+            </div>
+            <span class="dpr-section-hd-text">Statutory Clearances</span>
+        </div>
+        """, unsafe_allow_html=True)
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            _render_field("Date of Investement clearance by GOI", "Investment Clearance (GOI)")
+        with rc2:
+            _render_field("Date of CWC clearence", "CWC Clearance Date")
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            _render_field("Date of approval of EFC", "EFC Approval Date")
+        with rc2:
+            _render_field("Districts covered", "Districts Covered")
+
+    with right_col:
+        st.markdown("""
+        <div class="dpr-section-hd">
+            <div class="dpr-section-hd-icon">
+                <svg width="10" height="10" fill="none" stroke="#3b82f6" stroke-width="2.5" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                </svg>
+            </div>
+            <span class="dpr-section-hd-text">Technical Parameters &amp; Potential</span>
+        </div>
+        """, unsafe_allow_html=True)
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            _render_field("Gross Command area", "Gross Command Area (Ha)")
+        with rc2:
+            _render_field("CCA", "CCA (Ha)")
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            _render_field("Irrigation Potential in RABI", "Irrigation Potential - Rabi (Ha)")
+        with rc2:
+            _render_field("Irrigation Potential in KHARIF", "Irrigation Potential - Kharif (Ha)")
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            _render_field("Requirement of Water for project", "Water Requirement (MCM)")
+        with rc2:
+            _render_field("Availability of Water against the requirement", "Available Water (MCM)")
+
+        st.markdown("""
+        <div class="dpr-section-hd" style="margin-top:22px">
+            <div class="dpr-section-hd-icon">
+                <span style="font-size:9px;font-weight:700;color:#3b82f6">?</span>
+            </div>
+            <span class="dpr-section-hd-text">Crop Patterns (Pre vs Post)</span>
+        </div>
+        """, unsafe_allow_html=True)
+        pre_col, post_col = st.columns(2)
+        with pre_col:
+            st.markdown('<div class="dpr-crop-col-label">Pre-Project</div>', unsafe_allow_html=True)
+            _render_field("Pre-Project Crop Pattern in RABI", "Rabi Pattern")
+            _render_field("Pre-Project Crop Pattern in KHARIF", "Kharif Pattern")
+        with post_col:
+            st.markdown('<div class="dpr-crop-col-label">Post-Project</div>', unsafe_allow_html=True)
+            _render_field("Post-Project Crop Pattern in RABI", "Rabi Pattern")
+            _render_field("Post-Project Crop Pattern in KHARIF", "Kharif Pattern")
+
+    # ── SUPPORTING DOCUMENTS ──
+    with st.expander("Supporting Documents (optional)"):
+        dc1, dc2 = st.columns(2)
+        other_uploads = [
+            {"key": "investment_clearence", "label": "Investment Clearance"},
+            {"key": "cwc_clearence", "label": "CWC Clearance"},
+            {"key": "dpr_approval_by_efc", "label": "DPR Approval by EFC"},
+            {"key": "survey_reports", "label": "Survey Reports"},
+        ]
+        for ci, ucfg in enumerate(other_uploads):
+            tc = dc1 if ci % 2 == 0 else dc2
+            with tc:
+                upload_inputs[ucfg["key"]] = st.file_uploader(
+                    ucfg["label"],
+                    type=["pdf", "doc", "docx", "xlsx", "xls", "jpg", "jpeg", "png"],
+                    key=f"dpr_upload_{ucfg['key']}_{safe_project}",
+                )
+                efn = existing_payload.get(f"{ucfg['key']}_file_name")
+                if efn:
+                    st.caption(f"On record: {efn}")
 
     if existing_dpr:
         last_file = existing_dpr.get("dpr_file_name") or "N/A"
         updated_at = fmt_dt(existing_dpr.get("updated_at"))
-        st.success(f"Existing DPR on record - File: `{last_file}` | Updated: {updated_at}")
+        st.success(f"Existing DPR on record -- File: `{last_file}` | Updated: {updated_at}")
 
-    # Revision sections
-    st.markdown("<hr class='form-section-divider'>", unsafe_allow_html=True)
-    st.markdown("""
-    <div class="form-section-heading">&#128260; DPR Revisions</div>
-    <div class="form-section-sub">Fill details for each revision of the DPR. Only fill revisions that have occurred.</div>
-    """, unsafe_allow_html=True)
+    # ── DPR REVISIONS ──
+    st.markdown('<div class="dpr-form-divider"></div>', unsafe_allow_html=True)
 
-    rev_ordinals = {1: "1st", 2: "2nd", 3: "3rd"}
-    for rev_num in range(1, 7):
-        rev_label_sfx = rev_ordinals.get(rev_num, f"{rev_num}th")
-        rev_title = f"{rev_label_sfx} Revision"
-        st.markdown(f"""
-        <div class="revision-section">
-            <div class="revision-section-title">&#9634;&nbsp; {rev_title}</div>
-            <div class="revision-section-sub">Enter details for the {rev_title.lower()} of the DPR, if applicable.</div>
+    with st.container(border=True):
+        st.markdown("""
+        <div class="dpr-rev-hdr">
+            <span class="dpr-rev-icon">
+                <svg width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 .49-3.95"/>
+                </svg>
+            </span>
+            <span class="dpr-rev-title-text">DPR Revisions</span>
         </div>
         """, unsafe_allow_html=True)
 
-        rc1, rc2, rc3 = st.columns(3)
-        for col_idx, (field_suffix, col_widget) in enumerate([
-            (f"Date of approval revised DPR ({rev_label_sfx} revision)", rc1),
-            (f"Amount of revised DPR ({rev_label_sfx} revision)", rc2),
-            (f"Target date to complete the project ({rev_label_sfx} revision)", rc3),
-        ]):
-            state_key = f"dpr_form_{_safe_key(field_suffix)}_{safe_project}"
-            cfg_match = next((c for c in field_configs if c["label"] == field_suffix), None)
-            if not cfg_match:
-                continue
-            with col_widget:
-                if cfg_match["type"] == "date":
-                    value = st.date_input(cfg_match["label"], key=state_key)
-                else:
-                    value = st.text_input(cfg_match["label"], key=state_key)
-            form_values[field_suffix] = value
+        rev_ordinals = {1: "1st", 2: "2nd", 3: "3rd"}
+        rev_tabs_list = st.tabs(["v1", "v2", "v3", "v4", "v5", "v6"])
 
-        # Revision PDF upload
-        rev_up_key = f"dpr_rev_{rev_num}_pdf_{safe_project}"
-        rev_file_name_key = f"revision_{rev_num}_file_name"
-        existing_rev_file = existing_payload.get(rev_file_name_key)
-        upload_inputs[f"revision_{rev_num}"] = st.file_uploader(
-            f"Upload {rev_title} DPR (PDF)",
-            type=["pdf", "doc", "docx", "jpg", "jpeg", "png"],
-            key=rev_up_key,
-        )
-        if existing_rev_file:
-            st.caption(f"On record: {existing_rev_file}")
+        for rev_num, rev_tab in enumerate(rev_tabs_list, start=1):
+            rev_lbl = rev_ordinals.get(rev_num, f"{rev_num}th")
+            date_field = f"Date of approval revised DPR ({rev_lbl} revision)"
+            amount_field = f"Amount of revised DPR ({rev_lbl} revision)"
+            target_field = f"Target date to complete the project ({rev_lbl} revision)"
+            with rev_tab:
+                rc1, rc2, rc3 = st.columns(3)
+                with rc1:
+                    sk = f"dpr_form_{_safe_key(date_field)}_{safe_project}"
+                    if cfg_map.get(date_field):
+                        form_values[date_field] = st.date_input("Date of Approval (Revised)", key=sk)
+                with rc2:
+                    sk = f"dpr_form_{_safe_key(amount_field)}_{safe_project}"
+                    if cfg_map.get(amount_field):
+                        form_values[amount_field] = st.text_input("Amount of Revised DPR", key=sk)
+                with rc3:
+                    sk = f"dpr_form_{_safe_key(target_field)}_{safe_project}"
+                    if cfg_map.get(target_field):
+                        form_values[target_field] = st.date_input("Target Completion Date", key=sk)
+                st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+                _, up_col2 = st.columns([3, 2])
+                with up_col2:
+                    upload_inputs[f"revision_{rev_num}"] = st.file_uploader(
+                        f"Upload Revised DPR PDF (V{rev_num})",
+                        type=["pdf", "doc", "docx", "jpg", "jpeg", "png"],
+                        key=f"dpr_rev_{rev_num}_pdf_{safe_project}",
+                    )
+                    existing_rev_file = existing_payload.get(f"revision_{rev_num}_file_name")
+                    if existing_rev_file:
+                        st.caption(f"On record: {existing_rev_file}")
 
-    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-    save_col, cancel_col = st.columns([4, 1])
-    with save_col:
-        save_clicked = st.button("Save DPR", key=f"btn_save_dpr_{safe_project}", use_container_width=True, type="primary")
+    st.markdown('<div style="height:16px"></div>', unsafe_allow_html=True)
+    _, cancel_col = st.columns([5, 1])
     with cancel_col:
         if st.button("Cancel", key=f"btn_cancel_dpr_{safe_project}", use_container_width=True):
             back_flow_page()
             st.rerun()
+
+    save_clicked = save_clicked_top
 
     if save_clicked:
         cleaned_values = {}
@@ -2302,7 +2434,7 @@ def render_create_estimate_page(flow_data=None):
             except Exception:
                 pass
 
-        # Return to project detail page â€” do NOT jump into contract form
+        # Return to project detail page â€" do NOT jump into contract form
         open_flow_page(
             "project_detail",
             data={"project_name": nm_proj, "module": "contract_management"},
@@ -2671,7 +2803,7 @@ def render_project_detail_page(flow_data=None):
 
 def render_new_application_page(flow_data=None):
     flow_data = flow_data or {}
-    render_flow_header("Start New Project", back_key="back_new_app_top", align="center")
+    render_flow_header("", back_key="back_new_app_top", align="center")
     project_placeholder = "-- Select Project --"
     created_projects_key = "created_projects_store"
 
@@ -2687,43 +2819,8 @@ def render_new_application_page(flow_data=None):
     elif st.session_state.get(selected_module_key) not in module_options:
         st.session_state[selected_module_key] = module_options[0]
 
-    # Match the "Select Project" section styling (heading + dropdown with collapsed label).
-    st.markdown("#### Select Module")
-    selected_m = st.selectbox(
-        "Select Module",
-        options=module_options,
-        format_func=lambda x: module_display_map[x],
-        key=selected_module_key,
-        label_visibility="collapsed",
-    )
-
-    if selected_m != "contract_management":
-        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-        if st.button("Start Application ->", use_container_width=True, type="primary"):
-            clear_module_state(selected_m)
-            try:
-                target_m_id = create_master_submission(
-                    user_id,
-                    selected_m,
-                    modules.get(selected_m, []),
-                    status="DRAFT",
-                    estimate_number=None,
-                    year_of_estimate=None,
-                    name_of_project=None,
-                )
-                st.session_state.master_id = target_m_id
-                st.session_state.current_view = selected_m
-                remember_flow_return_for_module()
-                close_flow_page()
-                st.rerun()
-            except Exception as e:
-                report_error("Error starting application.", e, "app.render_new_application_page")
-                return
-        return
-
     prefill_project = (flow_data.get("prefill_name_of_project") or "").strip()
     merged_projects = build_contract_project_catalog(prefill_project=prefill_project)
-
     project_options = [
         project_placeholder,
         "Upper Ganga Canal Rehabilitation",
@@ -2736,40 +2833,78 @@ def render_new_application_page(flow_data=None):
         pname = item.get("project_name")
         if pname and pname not in project_options:
             project_options.append(pname)
-
     if prefill_project:
         st.session_state["new_app_project_name"] = prefill_project
     elif st.session_state.get("new_app_project_name") not in project_options:
         st.session_state["new_app_project_name"] = project_placeholder
 
-    st.markdown("#### Select Project")
-    st.selectbox(
-        "Name of Project",
-        options=project_options,
-        key="new_app_project_name",
-        help="Select an existing project name from the list.",
-        label_visibility="collapsed",
-    )
-    if st.button("Select Project", key="btn_create_project", use_container_width=True, type="primary"):
-        selected_project = (st.session_state.get("new_app_project_name") or "").strip()
-        if not selected_project or selected_project == project_placeholder:
-            st.error("Please select a project name first.")
-            return
-        current_projects = st.session_state.get(created_projects_key, [])
-        exists = any((p.get("project_name") or "").strip().lower() == selected_project.lower() for p in current_projects)
-        if not exists:
-            current_projects.insert(0, {
-                "project_name": selected_project,
-                "created_at": datetime.datetime.now().isoformat(),
-                "estimate_count": 0,
-            })
-            st.session_state[created_projects_key] = current_projects
-        open_flow_page(
-            "project_detail",
-            data={"project_name": selected_project, "module": "contract_management"},
-            push_history=True,
-        )
-        st.rerun()
+    _, card_col, _ = st.columns([1.8, 4, 1.8])
+    with card_col:
+        with st.container(border=True):
+            st.markdown("""
+            <div class="np-card-intro">
+                <div class="np-card-icon">&#128194;</div>
+                <div>
+                    <div class="np-card-intro-title">Start New Project</div>
+                    <div class="np-card-intro-sub"></div>
+                </div>
+            </div>""", unsafe_allow_html=True)
+            selected_m = st.selectbox(
+                "Select Module",
+                options=module_options,
+                format_func=lambda x: module_display_map[x],
+                key=selected_module_key,
+                label_visibility="visible",
+            )
+
+            if selected_m == "contract_management":
+                st.selectbox(
+                    "Select Project",
+                    options=project_options,
+                    key="new_app_project_name",
+                    help="Select an existing project name from the list.",
+                    label_visibility="visible",
+                )
+                if st.button("Select Project", key="btn_create_project", use_container_width=True, type="primary"):
+                    selected_project = (st.session_state.get("new_app_project_name") or "").strip()
+                    if not selected_project or selected_project == project_placeholder:
+                        st.error("Please select a project name first.")
+                        return
+                    current_projects = st.session_state.get(created_projects_key, [])
+                    exists = any((p.get("project_name") or "").strip().lower() == selected_project.lower() for p in current_projects)
+                    if not exists:
+                        current_projects.insert(0, {
+                            "project_name": selected_project,
+                            "created_at": datetime.datetime.now().isoformat(),
+                            "estimate_count": 0,
+                        })
+                        st.session_state[created_projects_key] = current_projects
+                    open_flow_page(
+                        "project_detail",
+                        data={"project_name": selected_project, "module": "contract_management"},
+                        push_history=True,
+                    )
+                    st.rerun()
+            else:
+                if st.button("Start Application →", use_container_width=True, type="primary"):
+                    clear_module_state(selected_m)
+                    try:
+                        target_m_id = create_master_submission(
+                            user_id,
+                            selected_m,
+                            modules.get(selected_m, []),
+                            status="DRAFT",
+                            estimate_number=None,
+                            year_of_estimate=None,
+                            name_of_project=None,
+                        )
+                        st.session_state.master_id = target_m_id
+                        st.session_state.current_view = selected_m
+                        remember_flow_return_for_module()
+                        close_flow_page()
+                        st.rerun()
+                    except Exception as e:
+                        report_error("Error starting application.", e, "app.render_new_application_page")
 
 def render_active_flow_page():
     page = st.session_state.get("flow_page")
