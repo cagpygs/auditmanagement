@@ -1038,10 +1038,8 @@ def render_estimate_group_page(est_no, est_yr, user_id=None, module=None):
 
     y_val = est_yr.year if hasattr(est_yr, "year") else est_yr
     safe_est = _safe_key(est_no)
-    render_flow_header(
-        f"Contract for Estimate: {est_no} ({y_val})",
-        back_key=f"back_est_group_top_{safe_est}",
-    )
+
+    render_back_link(f"back_est_group_top_{safe_est}")
 
     is_admin_user = st.session_state.get("role") == "admin"
 
@@ -1049,16 +1047,35 @@ def render_estimate_group_page(est_no, est_yr, user_id=None, module=None):
         start_contract_href = (
             f'./?contract_action=start_new&est_no={quote(str(est_no))}&est_yr={quote(str(est_yr))}'
         )
-        st.markdown(
-            (
-                f'<div style="text-align:center; margin:2px 0 10px 0;">'
-                f'<a href="{start_contract_href}" target="_self" class="cta-link">Start New Contract for this Estimate</a>'
-                f'</div>'
-            ),
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("<hr style='margin:8px 0;'>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="flow-form-header">
+          <div class="flow-form-badge">ESTIMATE</div>
+          <div class="flow-form-title">Contract for Estimate: <span class="flow-form-title-accent">{esc_html(str(est_no))} ({esc_html(str(y_val))})</span></div>
+          <div class="flow-form-subtitle">Review and manage contracts linked to this estimate.</div>
+        </div>
+        <div class="contract-action-bar">
+          <div>
+            <div class="contract-action-label">Estimate Reference</div>
+            <div class="contract-action-id">{esc_html(str(est_no))} &mdash; {esc_html(str(y_val))}</div>
+          </div>
+          <a href="{start_contract_href}" target="_self" class="contract-start-btn">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Start New Contract for this Estimate
+          </a>
+        </div>
+        <hr class="flow-section-divider"/>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="flow-form-header">
+          <div class="flow-form-badge">ESTIMATE</div>
+          <div class="flow-form-title">Contract for Estimate: <span class="flow-form-title-accent">{esc_html(str(est_no))} ({esc_html(str(y_val))})</span></div>
+          <div class="flow-form-subtitle">Review and manage contracts linked to this estimate.</div>
+        </div>
+        <hr class="flow-section-divider"/>
+        """, unsafe_allow_html=True)
 
     all_submissions = get_submissions_by_estimate(est_no, est_yr, user_id=user_id, module=module)
     submissions, _ = _split_contract_submissions(
@@ -2136,10 +2153,7 @@ def render_create_estimate_page(flow_data=None):
     flow_data = flow_data or {}
     project_name = (flow_data.get("project_name") or "").strip()
     safe_project = _safe_key(project_name or "project")
-    render_flow_header(
-        f"New Estimate - {project_name or 'Unknown'}",
-        back_key=f"back_create_est_{safe_project}",
-    )
+    render_back_link(f"back_create_est_{safe_project}")
 
     if not project_name:
         st.warning("No project selected.")
@@ -2162,14 +2176,24 @@ def render_create_estimate_page(flow_data=None):
             st.rerun()
         return
 
-    # Show project context
+    # Page header + project context
     st.markdown(f"""
-    <div style="background:var(--primary-pale);border:1px solid var(--border);border-left:3px solid var(--primary);
-                border-radius:0 8px 8px 0;padding:12px 18px;margin-bottom:20px;">
-        <div style="font-size:10px;font-weight:700;color:var(--text-faint);text-transform:uppercase;
-                    letter-spacing:0.6px;margin-bottom:3px;">Project</div>
-        <div style="font-family:'Crimson Pro',serif;font-size:18px;font-weight:600;
-                    color:var(--primary);">{esc_html(project_name)}</div>
+    <div class="flow-form-header">
+      <div class="flow-form-badge">ESTIMATE CREATION</div>
+      <div class="flow-form-title">New Estimate</div>
+      <div class="flow-form-subtitle">Fill in the estimate details and upload the supporting document.</div>
+    </div>
+    <div class="proj-context-card">
+      <div class="proj-context-icon">
+        <svg width="18" height="18" fill="none" stroke="#475569" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+        </svg>
+      </div>
+      <div>
+        <div class="proj-context-label">Project</div>
+        <div class="proj-context-name">{esc_html(project_name)}</div>
+      </div>
     </div>
     """, unsafe_allow_html=True)
 
