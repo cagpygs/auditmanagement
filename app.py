@@ -528,47 +528,45 @@ def custom_file_uploader(label, key, type=None):
     hover_border = "#059669" if is_uploaded else "#d97706"
 
     st.markdown(f"""
-    <style>
-    div[data-testid="stElementContainer"]:has(div.st-key-{safe_key}) {{
-        border: none !important;
-        background: transparent !important;
-    }}
+<style>
+div.st-key-{safe_key} button[data-testid="stBaseButton-secondary"] {{
+     width: auto !important;
+    height: 32px !important;
+    padding: 4px 14px !important;
+    background: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    margin: 0 auto;
+    color: transparent !important;
+    font-size: 0 !important;
+    transition: all 0.2s ease;
+}}
 
-    div.st-key-{safe_key} [data-testid="stFileUploader"] label,
-    div.st-key-{safe_key} [data-testid="stFileUploaderDropzoneInstructions"] {{
-        display: none !important;
-    }}
+/* 🔥 ICON + TEXT */
+div.st-key-{safe_key} button[data-testid="stBaseButton-secondary"]::after {{
+    content: "⬆ {display_text}";
+    color: #d97706;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}}
 
-    div.st-key-{safe_key} section[data-testid="stFileUploaderDropzone"] {{
-        border: none !important;
-        background: transparent !important;
-        padding: 0 !important;
-    }}
+/* Hover */
+div.st-key-{safe_key} button[data-testid="stBaseButton-secondary"]:hover {{
+    background: #fef3c7 !important;
+    border-color: #fcd34d !important;
+}}
 
-    div.st-key-{safe_key} button[data-testid="stBaseButton-secondary"] {{
-        width: 100% !important;
-        height: 40px !important;
-        background: {bg} !important;
-        border: 1.5px solid {border} !important;
-        border-radius: 8px !important;
-        color: transparent !important;
-        font-size: 0 !important;
-    }}
-
-    div.st-key-{safe_key} button[data-testid="stBaseButton-secondary"]::after {{
-        content: "{display_text}";
-        color: {color};
-        font-size: 11px;
-        font-weight: 800;
-        text-transform: uppercase;
-    }}
-
-    div.st-key-{safe_key} button[data-testid="stBaseButton-secondary"]:hover {{
-        background: {hover_bg} !important;
-        border-color: {hover_border} !important;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
+/* Click effect */
+div.st-key-{safe_key} button[data-testid="stBaseButton-secondary"]:active {{
+    transform: scale(0.95);
+}}
+</style>
+""", unsafe_allow_html=True)
 
     return uploaded_file
 # =====================================================
@@ -1925,9 +1923,8 @@ def render_create_dpr_page(flow_data=None):
             st.caption(f"On record: {existing_dpr_file}")
     with save_col:
         save_clicked_top = st.button(
-            "\U0001f4be Save Documentation",
+            "🖫 Save",
             key=f"btn_save_dpr_top_{safe_project}",
-            use_container_width=True,
             type="primary",
         )
 

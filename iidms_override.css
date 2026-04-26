@@ -2604,3 +2604,35 @@ section[data-testid="stFileUploaderDropzone"] {
     background: transparent !important;
     padding: 0 !important;
 }
+
+div[class*="st-key-btn_save_dpr_top_"] button {
+    width: auto !important;
+    height: 32px !important;
+    padding: 4px 14px !important;
+
+    border-radius: 10px !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+
+    background: #1e293b !important;
+    color: #ffffff !important;
+    border: 1px solid #1e293b !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+
+    transition: all 0.2s ease !important;
+}
+
+div[class*="st-key-btn_save_dpr_top_"] button:hover {
+    background: #334155 !important;
+    border-color: #334155 !important;
+}
+
+div[class*="st-key-btn_save_dpr_top_"] button:active {
+    transform: scale(0.95);
+}
