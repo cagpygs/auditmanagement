@@ -3372,6 +3372,7 @@ elif st.query_params.get("dash_action"):
         if project_name:
             st.session_state.current_project_name = project_name
             if action_name == "view_dpr":
+                st.session_state.current_view = "Main"
                 open_flow_page(
                     "dpr_view",
                     data={"project_name": project_name, "module": "contract_management"},
@@ -3383,6 +3384,27 @@ elif st.query_params.get("dash_action"):
                     data={"project_name": project_name, "module": "contract_management"},
                     push_history=False,
                 )
+            elif action_name == "view_project":
+                st.session_state.current_view = "Main"
+                open_flow_page(
+                    "project_detail",
+                    data={"project_name": project_name, "module": "contract_management"},
+                    push_history=False,
+                )
+            elif action_name == "view_estimate":
+                st.session_state.current_view = "Main"
+                est_no = st.query_params.get("dash_est_no", "")
+                est_yr = st.query_params.get("dash_est_yr", "")
+                if isinstance(est_no, list): est_no = est_no[0] if est_no else ""
+                if isinstance(est_yr, list): est_yr = est_yr[0] if est_yr else ""
+                est_no = str(est_no).strip()
+                est_yr = str(est_yr).strip()
+                if est_no and est_yr:
+                    open_flow_page(
+                        "estimate_group",
+                        data={"est_no": est_no, "est_yr": est_yr, "user_id": user_id, "module": "contract_management"},
+                        push_history=False,
+                    )
     st.query_params.clear()
     st.rerun()
 elif st.query_params.get("dash_project"):
@@ -3710,31 +3732,63 @@ def render_global_summary_page(view_key):
 
     rows_html = ""
     for p in dashboard_projects:
-        pname       = esc_html(p.get("project_name", "Unknown Project"))
-        action_url  = f"?nav=Main&dash_action=view_project&dash_project={quote(p.get('project_name', ''))}"
+        raw_pname = p.get("project_name", "")
+        pname = esc_html(raw_pname or "Unknown Project")
+        
         if is_dpr:
-            status_html = '<span class="gs-status-badge gs-badge-dpr">DPR TRACKED</span>'
+            action_url = f"?dash_action=view_dpr&dash_project={quote(raw_pname)}"
+            rows_html += (
+                f'<tr>'
+                f'<td class="td-project-identity"><div class="iidms-proj-name"><a href="{action_url}" target="_self">{pname}</a></div></td>'
+                f'<td><span class="gs-status-badge gs-badge-dpr">DPR TRACKED</span></td>'
+                f'<td><a href="{action_url}" target="_self" class="iidms-open-btn">View DPR &rsaquo;</a></td>'
+                f'</tr>'
+            )
         else:
-            count = int(p.get("estimate_count") or 0)
-            label = f"{count} ESTIMATE{'S' if count != 1 else ''}"
-            status_html = f'<span class="gs-status-badge gs-badge-est">{label}</span>'
-        rows_html += (
-            f'<tr>'
-            f'<td class="td-project-identity"><div class="iidms-proj-name"><a href="{action_url}" target="_self">{pname}</a></div></td>'
-            f'<td>{status_html}</td>'
-            f'<td><a href="{action_url}" target="_self" class="iidms-open-btn">View Project &rsaquo;</a></td>'
-            f'</tr>'
-        )
+            est_groups = get_project_estimate_groups(raw_pname)
+            for eg in est_groups:
+                est_no = str(eg.get("estimate_number") or "")
+                est_yr = eg.get("year_of_estimate")
+                yr_val = est_yr.year if hasattr(est_yr, "year") else str(est_yr or "")
+                status = str(eg.get("status") or "").strip().lower()
+                
+                pill_cls = "gs-badge-est-done" if status == "completed" else "gs-badge-est-draft"
+                pill_lbl = "COMPLETED" if status == "completed" else "DRAFT"
+                
+                est_url = (
+                    f"?dash_action=view_estimate"
+                    f"&dash_project={quote(raw_pname)}"
+                    f"&dash_est_no={quote(est_no)}"
+                    f"&dash_est_yr={quote(str(yr_val))}"
+                )
+                
+                identity_html = (
+                    f'<div class="iidms-proj-name"><a href="{est_url}" target="_self">{pname}</a></div>'
+                    f'<div style="font-size:11px;color:#64748b;margin-top:2px;">'
+                    f'Estimate: <b>{esc_html(est_no)}</b> ({esc_html(str(yr_val))})'
+                    f'</div>'
+                )
+                
+                rows_html += (
+                    f'<tr>'
+                    f'<td class="td-project-identity">{identity_html}</td>'
+                    f'<td><span class="gs-status-badge {pill_cls}">{pill_lbl}</span></td>'
+                    f'<td><a href="{est_url}" target="_self" class="iidms-open-btn">View Estimate &rsaquo;</a></td>'
+                    f'</tr>'
+                )
 
     table_html = (
-        '<table class="proj-table">'
-        '<thead><tr>'
-        '<th>PROJECT NAME</th>'
+        f'<style>'
+        f'.gs-status-badge{{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 10px;border-radius:20px;text-transform:uppercase;}}'
+        f'.gs-badge-dpr{{color:#2563eb;background:#eff6ff;border:1px solid #dbeafe;}}'
+        f'.gs-badge-est-done{{color:#15803d;background:#dcfce7;}}'
+        f'.gs-badge-est-draft{{color:#b45309;background:#fef9c3;}}'
+        f'</style>'
+        '<table class="proj-table"><thead><tr>'
+        f'<th>{"PROJECT NAME" if is_dpr else "PROJECT &amp; ESTIMATE"}</th>'
         '<th style="width:200px;">STATUS</th>'
         '<th style="width:170px;">ACTION</th>'
-        '</tr></thead>'
-        '<tbody>' + rows_html + '</tbody>'
-        '</table>'
+        '</tr></thead><tbody>' + rows_html + '</tbody></table>'
     )
     st.markdown(table_html, unsafe_allow_html=True)
     render_footer()
