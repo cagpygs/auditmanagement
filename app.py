@@ -223,7 +223,7 @@ if "allowed_modules" not in st.session_state:
 if "logging_out" not in st.session_state:
     st.session_state.logging_out = False
 if "current_view" not in st.session_state:
-    st.session_state.current_view = "Main"
+    st.session_state.current_view = "Dashboard"
 if "master_id" not in st.session_state:
     st.session_state.master_id = None
 if "flow_page" not in st.session_state:
@@ -294,27 +294,22 @@ if not st.session_state.logged_in or not st.session_state.user_id:
 
     _, col, _ = st.columns([1, 1.3, 1])
     with col:
-        # Ashoka Chakra SVG + branding
+       
         st.markdown(f"""
         <div class="login-container">
             <div class="login-logo">{LOGO_IMG}</div>
-            <div class="login-title">Irrigation Audit Management System</div>
+            <div class="login-title">Irrigation Data Management System</div>
             <div class="login-subtitle">Comptroller &amp; Auditor General of India</div>
-            <div class="login-subtitle">Irrigation Department, Uttar Pradesh</div>
+            <!--<div class="login-subtitle">Irrigation Department, Uttar Pradesh</div>-->
             <div class="login-tricolor"></div>
         </div>
         """, unsafe_allow_html=True)
 
         with st.container():
-            st.markdown(
-                "<p style='font-size:13px; font-weight:700; color:#374151; "
-                "text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;'>"
-                "Officer Sign In</p>",
-                unsafe_allow_html=True
-            )
+           
             u = st.text_input("Username", placeholder="Enter your username")
             p = st.text_input("Password", type="password", placeholder="Enter your password")
-            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
             if st.button("Sign In", use_container_width=True, type="primary"):
                 if not u or not p:
