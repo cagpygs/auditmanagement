@@ -187,6 +187,7 @@ def _cleanup_db(conn, cur=None):
 
 # ================= LOAD TABLES =================
 
+@st.cache_data(ttl=300, hash_funcs={"psycopg2.extensions.connection": lambda _: None})
 def get_all_tables(conn=None):
     close_conn = False
 
@@ -359,6 +360,7 @@ def update_master_attachments(master_id, estimate_path=None, sar_path=None):
         
         cur.execute(query, params)
         conn.commit()
+        get_master_submission.clear()
         return True
     except Exception as e:
         report_error("Error updating attachments.", e, "crud.update_master_attachments")
@@ -400,6 +402,7 @@ def update_master_submission(master_id, estimate_number=None, year_of_estimate=N
         
         cur.execute(query, params)
         conn.commit()
+        get_master_submission.clear()
         return True
     except Exception as e:
         report_error("Error updating master metadata.", e, "crud.update_master_submission")
@@ -480,6 +483,9 @@ def create_master_submission(user_id, module, tables, status='COMPLETED', estima
             )
 
         conn.commit()
+        get_user_master_submissions.clear()
+        get_user_master_submissions_admin.clear()
+        get_user_master_status_counts.clear()
         return master_id
     except Exception as e:
         _rollback_db(conn)
@@ -501,6 +507,11 @@ def update_master_status(master_id, status):
             (status, master_id)
         )
         conn.commit()
+        get_master_status.clear()
+        get_master_submission.clear()
+        get_user_master_status_counts.clear()
+        get_user_master_submissions.clear()
+        get_user_master_submissions_admin.clear()
         return True
     except Exception as e:
         report_error("Error updating master status.", e, "crud.update_master_status")
@@ -512,6 +523,7 @@ def update_master_status(master_id, status):
 
 # ================= GET USER MASTER SUBMISSIONS =================
 
+@st.cache_data(ttl=30)
 def get_user_master_submissions(user_id, module):
     conn = None
     cur = None
@@ -549,6 +561,7 @@ def get_user_master_submissions(user_id, module):
         _cleanup_db(conn, cur)
 
 
+@st.cache_data(ttl=30)
 def get_user_master_submissions_admin(user_id):
     conn = None
     cur = None
@@ -1347,6 +1360,7 @@ def upsert_project_dpr(
         _cleanup_db(conn, cur)
 
 
+@st.cache_data(ttl=30)
 def get_master_submission(master_id):
     """Retrieves a single record from master_submission by ID."""
     conn = None
@@ -1498,6 +1512,8 @@ def set_drafts_to_final(master_id, tables):
                 (master_id,)
             )
         conn.commit()
+        get_master_submission.clear()
+        get_user_master_status_counts.clear()
     except Exception as e:
         report_error("Error finalizing drafts.", e, "crud.set_drafts_to_final")
         _rollback_db(conn)
@@ -1583,6 +1599,7 @@ def get_user_draft_summaries(user_id):
 
 
 # ================= STATUS COUNTS =================
+@st.cache_data(ttl=30)
 def get_user_master_status_counts(user_id, all_modules=None):
     user_id = int(user_id)
 
@@ -1800,6 +1817,7 @@ def export_master_submission_pdf(master_id):
 
 # ================= GET TABLE COLUMNS =================
 
+@st.cache_data(ttl=300)
 def get_table_columns(table, is_admin=False):
     conn = None
     cur = None
@@ -1907,6 +1925,7 @@ def can_user_edit(master_id):
 # ================= RESTORE DRAFT =================
 
 
+@st.cache_data(ttl=30)
 def get_master_status(master_id):
     master_id = int(master_id)
     conn = None
@@ -1963,6 +1982,7 @@ def create_user(username, password, role="operator", allowed_modules=""):
             (username, password_hash, role, allowed_modules)
         )
         conn.commit()
+        get_all_users_admin.clear()
         return True, f"User '{username}' created successfully!"
 
     except Exception as e:
@@ -1972,6 +1992,7 @@ def create_user(username, password, role="operator", allowed_modules=""):
     finally:
         _cleanup_db(conn, cur)
 
+@st.cache_data(ttl=60)
 def get_all_users_admin():
     conn = None
     try:
@@ -1984,6 +2005,7 @@ def get_all_users_admin():
     finally:
         _cleanup_db(conn)
 
+@st.cache_data(ttl=60)
 def get_user_by_id(uid):
     """
     Fetches user information by ID.
@@ -2019,6 +2041,8 @@ def toggle_user_status(user_id, current_status):
         new_status = not current_status
         cur.execute("UPDATE users SET is_active = %s WHERE id = %s", (new_status, user_id))
         conn.commit()
+        get_all_users_admin.clear()
+        get_user_by_id.clear()
     except Exception as e:
         report_error("Error toggling user status.", e, "crud.toggle_user_status")
         _rollback_db(conn)
@@ -2037,6 +2061,8 @@ def update_user_modules(user_id, modules_list):
         modules_str = ",".join(modules_list)
         cur.execute("UPDATE users SET allowed_modules = %s WHERE id = %s", (modules_str, user_id))
         conn.commit()
+        get_all_users_admin.clear()
+        get_user_by_id.clear()
     except Exception as e:
         report_error("Error updating user modules.", e, "crud.update_user_modules")
         _rollback_db(conn)

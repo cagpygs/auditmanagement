@@ -401,6 +401,7 @@ _ic_projects  = '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/
 _ic_analysis  = '<svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>'
 _ic_about     = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-width="2.5"/><path d="M12 12v6"/></svg>'
 _ic_redflags  = '<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2.5"/></svg>'
+_ic_msi       = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>'
 
 with st.sidebar:
     st.markdown(f'''
@@ -414,6 +415,7 @@ with st.sidebar:
     <a href="./?nav=Dashboard" target="_self" class="{_nav_active("Dashboard")}"><span class="sidebar-nav-icon">{_ic_dashboard}</span> Dashboard</a>
     <a href="./?nav=Main" target="_self" class="{_main_active}"><span class="sidebar-nav-icon">{_ic_projects}</span> Projects</a>
     <a href="./?nav=Analysis" target="_self" class="{_analysis_active}"><span class="sidebar-nav-icon">{_ic_analysis}</span> Analysis</a>
+    <a href="./?nav=MSI" target="_self" class="{_nav_active("MSI")}"><span class="sidebar-nav-icon">{_ic_msi}</span> MSI</a>
     <a href="./?nav=AboutDept" target="_self" class="{_nav_active("AboutDept")}"><span class="sidebar-nav-icon">{_ic_about}</span> About Department</a>
     <div class="sidebar-section-label">SYSTEM UTILITIES</div>
     <a href="#" target="_self" class="sidebar-nav-item"><span class="sidebar-nav-icon">{_ic_redflags}</span> Red Flags</a>
@@ -3142,6 +3144,10 @@ elif st.query_params.get("nav") == "AboutDept":
     st.session_state.current_view = "AboutDept"
     st.query_params.clear()
     st.rerun()
+elif st.query_params.get("nav") == "MSI":
+    st.session_state.current_view = "MSI"
+    st.query_params.clear()
+    st.rerun()
 elif st.query_params.get("nav") == "NewApp":
     if not is_admin:
         open_flow_page("new_application", data={}, push_history=False)
@@ -3799,6 +3805,92 @@ if not is_admin:
     
     if current_view_key == "Analysis":
         render_analysis_page()
+
+    if current_view_key == "MSI":
+        st.markdown("""
+        <style>
+        .msi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;max-width:1000px;margin:32px auto 0 auto;}
+        @media(max-width:750px){.msi-grid{grid-template-columns:1fr 1fr;}}
+        .msi-card{background:#fff;border-radius:14px;padding:24px 22px 20px 22px;
+                  box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #f0f0f0;}
+        .msi-icon-wrap{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;
+                       justify-content:center;font-size:20px;margin-bottom:16px;}
+        .msi-title{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
+        .msi-desc{font-size:12px;color:#888;margin-bottom:18px;line-height:1.4;}
+        .msi-footer{display:flex;justify-content:space-between;align-items:flex-end;}
+        .msi-threshold-label{font-size:9px;font-weight:700;letter-spacing:1.2px;color:#aaa;text-transform:uppercase;margin-bottom:2px;}
+        .msi-threshold-val{font-size:13px;font-weight:700;color:#222;}
+        .msi-risk-label{font-size:9px;font-weight:700;letter-spacing:1.2px;color:#aaa;text-transform:uppercase;margin-bottom:2px;text-align:right;}
+        .msi-badge{display:inline-block;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;}
+        .badge-critical{background:#fde8e8;color:#e53e3e;}
+        .badge-high{background:#fef3e2;color:#d97706;}
+        .badge-medium{background:#e8f0fe;color:#3b82f6;}
+        .badge-low{background:#e6f9f0;color:#16a34a;}
+        </style>
+        <div style="max-width:1000px;margin:0 auto;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#6b7280;text-transform:uppercase;margin-bottom:6px;">
+            Market Sensitivity Indicators
+          </div>
+          <div style="font-size:26px;font-weight:800;color:#1a1f2e;margin-bottom:28px;">MSI Overview</div>
+        </div>
+        <div class="msi-grid">
+          <div class="msi-card">
+            <div class="msi-icon-wrap" style="background:#fde8e8;">&#x26A1;</div>
+            <div class="msi-title" style="color:#e53e3e;">Expenditure Intensity</div>
+            <div class="msi-desc">Net Paid vs Sanctioned Budget</div>
+            <div class="msi-footer">
+              <div><div class="msi-threshold-label">Threshold</div><div class="msi-threshold-val">&gt; 100%</div></div>
+              <div><div class="msi-risk-label">Risk</div><span class="msi-badge badge-critical">Critical</span></div>
+            </div>
+          </div>
+          <div class="msi-card">
+            <div class="msi-icon-wrap" style="background:#fef3e2;">&#x21C4;</div>
+            <div class="msi-title" style="color:#d97706;">Agreement Splitting</div>
+            <div class="msi-desc">Fragmented contracts in same ID</div>
+            <div class="msi-footer">
+              <div><div class="msi-threshold-label">Threshold</div><div class="msi-threshold-val">Detected</div></div>
+              <div><div class="msi-risk-label">Risk</div><span class="msi-badge badge-high">High</span></div>
+            </div>
+          </div>
+          <div class="msi-card">
+            <div class="msi-icon-wrap" style="background:#e8f0fe;">&#x1F4CA;</div>
+            <div class="msi-title" style="color:#3b82f6;">TS Compliance</div>
+            <div class="msi-desc">Agreements &gt; TS Value</div>
+            <div class="msi-footer">
+              <div><div class="msi-threshold-label">Threshold</div><div class="msi-threshold-val">&gt; 5% Delta</div></div>
+              <div><div class="msi-risk-label">Risk</div><span class="msi-badge badge-medium">Medium</span></div>
+            </div>
+          </div>
+          <div class="msi-card">
+            <div class="msi-icon-wrap" style="background:#e6f9f0;">&#x1F504;</div>
+            <div class="msi-title" style="color:#16a34a;">Revision Volatility</div>
+            <div class="msi-desc">Frequent baseline modifications</div>
+            <div class="msi-footer">
+              <div><div class="msi-threshold-label">Threshold</div><div class="msi-threshold-val">&gt; 3 Revised</div></div>
+              <div><div class="msi-risk-label">Risk</div><span class="msi-badge badge-low">Low</span></div>
+            </div>
+          </div>
+          <div class="msi-card">
+            <div class="msi-icon-wrap" style="background:#fef3e2;">&#x2699;&#xFE0F;</div>
+            <div class="msi-title" style="color:#d97706;">Execution Sync</div>
+            <div class="msi-desc">Civil vs Mech execution lag</div>
+            <div class="msi-footer">
+              <div><div class="msi-threshold-label">Threshold</div><div class="msi-threshold-val">&gt; 40% Gap</div></div>
+              <div><div class="msi-risk-label">Risk</div><span class="msi-badge badge-medium">Medium</span></div>
+            </div>
+          </div>
+          <div class="msi-card">
+            <div class="msi-icon-wrap" style="background:#fde8e8;">&#x26A0;&#xFE0F;</div>
+            <div class="msi-title" style="color:#e53e3e;">Labor Cess Integrity</div>
+            <div class="msi-desc">BOCW 1% mismatch in MB</div>
+            <div class="msi-footer">
+              <div><div class="msi-threshold-label">Threshold</div><div class="msi-threshold-val">Unverified</div></div>
+              <div><div class="msi-risk-label">Risk</div><span class="msi-badge badge-high">High</span></div>
+            </div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
 
     if current_view_key in ("GlobalDPRs", "GlobalEstimates"):
         render_global_summary_page(current_view_key)
