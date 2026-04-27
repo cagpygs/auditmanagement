@@ -135,12 +135,12 @@ try:
 except Exception as e:
     log_exception("app.query_param_handler", e)
 
+
 # Hidden developer info
 st.markdown("""
 <div id="dev-info" style="display:none;" data-developer="Latief" data-contact="+91-8951352811"
      data-system="Audit Management System" data-built-for="CAG India" aria-hidden="true"></div>
 """, unsafe_allow_html=True)
-
 
 # =====================================================
 # ================= CSS LOADING =======================
@@ -503,6 +503,23 @@ def clear_module_state(m_key=None):
             for key in list(st.session_state.keys()):
                 if key.startswith(f"{table}_"):
                     del st.session_state[key]
+
+_ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".xlsx", ".xls", ".jpg", ".jpeg", ".png"}
+_MAX_UPLOAD_BYTES   = 10 * 1024 * 1024  # 10 MB
+
+def _validate_upload(upload_obj):
+    """Returns (is_valid: bool, error_msg: str). Call before writing any uploaded file to disk."""
+    if upload_obj is None:
+        return False, "No file provided."
+    ext = os.path.splitext(upload_obj.name)[1].lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        allowed = ", ".join(sorted(_ALLOWED_EXTENSIONS))
+        return False, f"File type '{ext}' is not allowed. Permitted types: {allowed}"
+    if upload_obj.size > _MAX_UPLOAD_BYTES:
+        mb = upload_obj.size / (1024 * 1024)
+        return False, f"File is too large ({mb:.1f} MB). Maximum allowed size is 10 MB."
+    return True, ""
+
 
 def custom_file_uploader(label, key, type=None):
     safe_key = str(key).replace(" ", "_").replace("-", "_")
@@ -1269,11 +1286,15 @@ def render_estimate_group_page(est_no, est_yr, user_id=None, module=None):
             if est_f:
                 fid = f"{est_f.name}_{est_f.size}"
                 if st.session_state.get(f"last_up_est_{up_id}") != fid:
-                    ext = os.path.splitext(est_f.name)[1]
-                    spath = os.path.join("uploads", f"Estimate_{e_no}_{p_nm}_{e_yr}{ext}")
-                    with open(spath, "wb") as f:
-                        f.write(est_f.getbuffer())
-                    update_master_attachments(up_id, estimate_path=spath)
+                    _ok, _err = _validate_upload(est_f)
+                    if not _ok:
+                        st.error(_err)
+                    else:
+                        ext = os.path.splitext(est_f.name)[1].lower()
+                        spath = os.path.join("uploads", f"Estimate_{e_no}_{p_nm}_{e_yr}{ext}")
+                        with open(spath, "wb") as f:
+                            f.write(est_f.getbuffer())
+                        update_master_attachments(up_id, estimate_path=spath)
                     st.session_state[f"last_up_est_{up_id}"] = fid
                     st.success("Estimate uploaded successfully!")
                     st.rerun()
@@ -2141,12 +2162,17 @@ def render_create_dpr_page(flow_data=None):
                     saved_file_path = selected_file_path
             upload_obj = upload_inputs.get(cfg["key"])
             if upload_obj:
-                ext = os.path.splitext(upload_obj.name)[1]
-                ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-                fname = f"DPR_{safe_project}_{_safe_key(cfg['key'])}_{ts}{ext}"
-                saved_file_path = os.path.join("uploads", fname)
-                with open(saved_file_path, "wb") as fh:
-                    fh.write(upload_obj.getbuffer())
+                _ok, _err = _validate_upload(upload_obj)
+                if not _ok:
+                    st.error(_err)
+                    upload_obj = None
+                else:
+                    ext = os.path.splitext(upload_obj.name)[1].lower()
+                    ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                    fname = f"DPR_{safe_project}_{_safe_key(cfg['key'])}_{ts}{ext}"
+                    saved_file_path = os.path.join("uploads", fname)
+                    with open(saved_file_path, "wb") as fh:
+                        fh.write(upload_obj.getbuffer())
                 saved_file_name = upload_obj.name
             cleaned_values[file_name_key] = saved_file_name
             cleaned_values[file_path_key] = saved_file_path
@@ -2163,12 +2189,17 @@ def render_create_dpr_page(flow_data=None):
             saved_rev_path = existing_payload.get(rev_file_path_key)
             rev_upload = upload_inputs.get(rev_key)
             if rev_upload:
-                ext = os.path.splitext(rev_upload.name)[1]
-                ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-                fname = f"DPR_{safe_project}_rev{rev_num}_{ts}{ext}"
-                saved_rev_path = os.path.join("uploads", fname)
-                with open(saved_rev_path, "wb") as fh:
-                    fh.write(rev_upload.getbuffer())
+                _ok, _err = _validate_upload(rev_upload)
+                if not _ok:
+                    st.error(_err)
+                    rev_upload = None
+                else:
+                    ext = os.path.splitext(rev_upload.name)[1].lower()
+                    ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                    fname = f"DPR_{safe_project}_rev{rev_num}_{ts}{ext}"
+                    saved_rev_path = os.path.join("uploads", fname)
+                    with open(saved_rev_path, "wb") as fh:
+                        fh.write(rev_upload.getbuffer())
                 saved_rev_name = rev_upload.name
             cleaned_values[rev_file_name_key] = saved_rev_name
             cleaned_values[rev_file_path_key] = saved_rev_path
@@ -2469,13 +2500,18 @@ def render_create_estimate_page(flow_data=None):
     est_pdf_path = None
     est_pdf_name = None
     if est_pdf_upload:
-        os.makedirs("uploads", exist_ok=True)
-        ext = os.path.splitext(est_pdf_upload.name)[1]
-        ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-        est_pdf_name = est_pdf_upload.name
-        est_pdf_path = os.path.join("uploads", f"EST_{safe_project}_{_safe_key(est_no)}_{ts}{ext}")
-        with open(est_pdf_path, "wb") as fh:
-            fh.write(est_pdf_upload.getbuffer())
+        _ok, _err = _validate_upload(est_pdf_upload)
+        if not _ok:
+            st.error(_err)
+            est_pdf_upload = None
+        else:
+            os.makedirs("uploads", exist_ok=True)
+            ext = os.path.splitext(est_pdf_upload.name)[1].lower()
+            ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            est_pdf_name = est_pdf_upload.name
+            est_pdf_path = os.path.join("uploads", f"EST_{safe_project}_{_safe_key(est_no)}_{ts}{ext}")
+            with open(est_pdf_path, "wb") as fh:
+                fh.write(est_pdf_upload.getbuffer())
         st.session_state[f"est_pdf_saved_{safe_project}"] = est_pdf_name
 
     try:
@@ -3457,7 +3493,9 @@ if st.session_state.get("sub_to_view"):
     open_flow_page("submission_details", data={"sub": legacy_sub}, push_history=True)
     st.rerun()
 
-if render_active_flow_page():
+with st.spinner("Loading..."):
+    _flow_rendered = render_active_flow_page()
+if _flow_rendered:
     render_footer()
     st.stop()
 
@@ -3703,7 +3741,8 @@ def render_analysis_page():
 
 def render_global_summary_page(view_key):
     st.markdown('<div class="dashboard-no-padding-trigger"></div>', unsafe_allow_html=True)
-    dashboard_projects = build_contract_project_catalog()
+    with st.spinner("Loading data..."):
+        dashboard_projects = build_contract_project_catalog()
 
     is_dpr = view_key == "GlobalDPRs"
     title = "All DPRs" if is_dpr else "All Estimates"
@@ -3988,8 +4027,9 @@ if not is_admin:
         dash_projects = []
         dash_stats = {}
         if "contract_management" in modules:
-            dash_projects = build_contract_project_catalog()
-            dash_stats = get_contract_mini_dashboard_stats(dash_projects)
+            with st.spinner("Loading dashboard..."):
+                dash_projects = build_contract_project_catalog()
+                dash_stats = get_contract_mini_dashboard_stats(dash_projects)
 
         total_projects = len(dash_projects)
         total_estimates = dash_stats.get("estimates_incomplete", 0) + dash_stats.get("estimates_completed", 0)
@@ -5130,13 +5170,17 @@ if not is_admin:
                     en = clean(master_info.get("estimate_number", "NA"))
                     pn = clean(master_info.get("name_of_project", "NA"))
                     ey = clean(master_info.get("year_of_estimate", "NA"))
-                ext = os.path.splitext(est_file.name)[1]
-                spath = os.path.join("uploads", f"Estimate_{en}_{pn}_{ey}{ext}")
-                with open(spath, "wb") as f:
-                    f.write(est_file.getbuffer())
-                update_master_attachments(m_id, estimate_path=spath)
-                st.session_state["last_est_id"] = fid
-                st.rerun()
+                _ok, _err = _validate_upload(est_file)
+                if not _ok:
+                    st.error(_err)
+                else:
+                    ext = os.path.splitext(est_file.name)[1].lower()
+                    spath = os.path.join("uploads", f"Estimate_{en}_{pn}_{ey}{ext}")
+                    with open(spath, "wb") as f:
+                        f.write(est_file.getbuffer())
+                    update_master_attachments(m_id, estimate_path=spath)
+                    st.session_state["last_est_id"] = fid
+                    st.rerun()
 
         st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
@@ -5257,8 +5301,11 @@ if is_admin:
                         st.session_state.get('role') != 'admin'):
                     return
                 new_mods = st.session_state.get(session_key, [])
-                update_user_modules(uid, new_mods)
-                st.toast(f"Permissions updated for user ID: {uid}")
+                ok, err = update_user_modules(uid, new_mods)
+                if ok:
+                    st.toast(f"Permissions updated for user ID: {uid}")
+                else:
+                    st.toast(f"Failed to update permissions: {err}", icon="🚨")
 
             for i, row_usr in enumerate(paged_users):
                 uid         = row_usr['id']
@@ -5307,7 +5354,11 @@ if is_admin:
                         btn_label = "Revoke" if is_active else "Grant"
                         btn_type  = "secondary" if is_active else "primary"
                         if st.button(btn_label, key=f"btn_toggle_{uid}", type=btn_type, use_container_width=True):
-                            toggle_user_status(uid, is_active)
+                            ok, err = toggle_user_status(uid, is_active)
+                            if ok:
+                                st.toast(f"User {'revoked' if is_active else 'granted'} successfully.")
+                            else:
+                                st.error(f"Failed to update user status: {err}")
                             st.rerun()
                 st.markdown("<hr style='margin:0; padding:0;'>", unsafe_allow_html=True)
 

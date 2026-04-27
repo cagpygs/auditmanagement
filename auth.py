@@ -1,3 +1,6 @@
+import threading
+import time
+
 from crud import (
     get_connection,
     hash_password,
@@ -7,11 +10,49 @@ from crud import (
 )
 from error_utils import log_exception
 
+_MAX_ATTEMPTS    = 5
+_LOCKOUT_SECONDS = 15 * 60  # 15 minutes
+
+_login_attempts: dict = {}
+_attempts_lock  = threading.Lock()
+
+
+def _is_locked(username_lower: str):
+    """Returns (locked: bool, remaining_seconds: int)."""
+    with _attempts_lock:
+        entry = _login_attempts.get(username_lower)
+        if not entry:
+            return False, 0
+        until = entry.get("locked_until") or 0
+        if time.time() < until:
+            return True, int(until - time.time())
+        return False, 0
+
+
+def _record_failure(username_lower: str):
+    with _attempts_lock:
+        entry = _login_attempts.setdefault(username_lower, {"count": 0, "locked_until": None})
+        entry["count"] += 1
+        if entry["count"] >= _MAX_ATTEMPTS:
+            entry["locked_until"] = time.time() + _LOCKOUT_SECONDS
+
+
+def _clear_attempts(username_lower: str):
+    with _attempts_lock:
+        _login_attempts.pop(username_lower, None)
+
 
 def login(username, password):
 
     if not username or not password:
         return None, "Missing credentials"
+
+    username_lower = username.strip().lower()
+    locked, remaining = _is_locked(username_lower)
+    if locked:
+        mins = remaining // 60
+        secs = remaining % 60
+        return None, f"Account locked. Try again in {mins}m {secs}s."
 
     conn = None
     cur = None
@@ -30,6 +71,7 @@ def login(username, password):
         row = cur.fetchone()
 
         if not row:
+            _record_failure(username_lower)
             return None, "Invalid username or password"
 
         is_active = row[3]
@@ -38,6 +80,7 @@ def login(username, password):
 
         stored_hash = row[5] or ""
         if not verify_password(password, stored_hash):
+            _record_failure(username_lower)
             return None, "Invalid username or password"
 
         if password_needs_upgrade(stored_hash):
@@ -50,7 +93,10 @@ def login(username, password):
             except Exception as upgrade_err:
                 conn.rollback()
                 log_exception(f"auth.login.password_upgrade.user_id={row[0]}", upgrade_err)
+                # Deny login if we cannot hash — keeps plain-text out of the DB permanently.
+                return None, "Login failed: unable to secure password. Contact your administrator."
 
+        _clear_attempts(username_lower)
         role = (row[2] or "operator").lower()
         return {
             "id": row[0],

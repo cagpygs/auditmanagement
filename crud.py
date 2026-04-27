@@ -116,8 +116,11 @@ def verify_password(password, stored_hash):
         )
         return hmac.compare_digest(calculated_digest, expected_digest)
 
-    # Backward compatibility for legacy rows that still store plain text.
-    return hmac.compare_digest(stored_hash, password)
+    # Legacy plain-text rows: accept once so the caller can force a hash upgrade, then deny.
+    # password_needs_upgrade() returns True for these rows, so auth.py will re-hash on login.
+    if hmac.compare_digest(stored_hash, password):
+        return True
+    return False
 
 
 def password_needs_upgrade(stored_hash):
@@ -341,23 +344,26 @@ def update_master_attachments(master_id, estimate_path=None, sar_path=None):
         conn = get_connection()
         cur = conn.cursor()
         
-        updates = []
+        col_values = []
         params = []
-        
+
         if estimate_path is not None:
-            updates.append("estimate_attachment = %s")
+            col_values.append(sql.Identifier("estimate_attachment"))
             params.append(estimate_path)
-        
+
         if sar_path is not None:
-            updates.append("sar_attachment = %s")
+            col_values.append(sql.Identifier("sar_attachment"))
             params.append(sar_path)
-            
-        if not updates:
+
+        if not col_values:
             return True
-            
+
         params.append(master_id)
-        query = f"UPDATE master_submission SET {', '.join(updates)} WHERE id = %s"
-        
+        set_clause = sql.SQL(", ").join(
+            sql.SQL("{} = %s").format(col) for col in col_values
+        )
+        query = sql.SQL("UPDATE master_submission SET {} WHERE id = %s").format(set_clause)
+
         cur.execute(query, params)
         conn.commit()
         get_master_submission.clear()
@@ -379,27 +385,30 @@ def update_master_submission(master_id, estimate_number=None, year_of_estimate=N
         conn = get_connection()
         cur = conn.cursor()
         
-        updates = []
+        col_values = []
         params = []
-        
+
         if estimate_number is not None:
-            updates.append("estimate_number = %s")
+            col_values.append(sql.Identifier("estimate_number"))
             params.append(estimate_number)
-            
+
         if year_of_estimate is not None:
-            updates.append("year_of_estimate = %s")
+            col_values.append(sql.Identifier("year_of_estimate"))
             params.append(year_of_estimate)
-            
+
         if name_of_project is not None:
-            updates.append("name_of_project = %s")
+            col_values.append(sql.Identifier("name_of_project"))
             params.append(name_of_project)
-            
-        if not updates:
+
+        if not col_values:
             return True
-            
+
         params.append(master_id)
-        query = f"UPDATE master_submission SET {', '.join(updates)} WHERE id = %s"
-        
+        set_clause = sql.SQL(", ").join(
+            sql.SQL("{} = %s").format(col) for col in col_values
+        )
+        query = sql.SQL("UPDATE master_submission SET {} WHERE id = %s").format(set_clause)
+
         cur.execute(query, params)
         conn.commit()
         get_master_submission.clear()
@@ -1047,10 +1056,17 @@ def ensure_project_dpr_table():
             source_cols = [canonical_col] + [col for col in legacy_cols if col in existing_legacy_cols]
             if len(source_cols) <= 1:
                 continue
-            coalesce_parts = ", ".join([f"NULLIF(TRIM({col}), '')" for col in source_cols])
-            set_clauses.append(f"{canonical_col} = COALESCE({coalesce_parts})")
+            coalesce_parts = sql.SQL(", ").join(
+                sql.SQL("NULLIF(TRIM({}), '')").format(sql.Identifier(col))
+                for col in source_cols
+            )
+            set_clauses.append(
+                sql.SQL("{} = COALESCE({})").format(sql.Identifier(canonical_col), coalesce_parts)
+            )
         if set_clauses:
-            cur.execute(f"UPDATE project_dpr SET {', '.join(set_clauses)}")
+            cur.execute(
+                sql.SQL("UPDATE project_dpr SET {}").format(sql.SQL(", ").join(set_clauses))
+            )
         # Remove legacy dummy columns from older schema versions.
         for legacy_col in [
             "dummmy_field_1",
@@ -1064,46 +1080,52 @@ def ensure_project_dpr_table():
             "dummy_field_4",
             "dummy_field_5",
         ]:
-            cur.execute(f"ALTER TABLE project_dpr DROP COLUMN IF EXISTS {legacy_col}")
+            cur.execute(
+                sql.SQL("ALTER TABLE project_dpr DROP COLUMN IF EXISTS {}").format(
+                    sql.Identifier(legacy_col)
+                )
+            )
         dpr_columns = [
-            "category_of_project TEXT",
-            "type_of_project TEXT",
-            "location_of_head_works TEXT",
-            "date_of_investement_clearance_by_goi TEXT",
-            "date_of_cwc_clearence TEXT",
-            "date_of_approval_of_efc TEXT",
-            "districts_covered TEXT",
-            "gross_command_area TEXT",
-            "cca TEXT",
-            "irrigation_potential_in_rabi TEXT",
-            "irrigation_potential_in_kharif TEXT",
-            "requirement_of_water_for_project TEXT",
-            "availability_of_water_against_the_requirement TEXT",
-            "pre_project_crop_pattern_in_rabi TEXT",
-            "pre_project_crop_pattern_in_kharif TEXT",
-            "post_project_crop_pattern_in_rabi TEXT",
-            "post_project_crop_pattern_in_kharif TEXT",
-            "upload_complete_dpr_file_name TEXT",
-            "upload_complete_dpr_file_path TEXT",
-            "investment_clearence_file_name TEXT",
-            "investment_clearence_file_path TEXT",
-            "cwc_clearence_file_name TEXT",
-            "cwc_clearence_file_path TEXT",
-            "dpr_approval_by_efc_file_name TEXT",
-            "dpr_approval_by_efc_file_path TEXT",
-            "survey_reports_file_name TEXT",
-            "survey_reports_file_path TEXT",
+            "category_of_project",
+            "type_of_project",
+            "location_of_head_works",
+            "date_of_investement_clearance_by_goi",
+            "date_of_cwc_clearence",
+            "date_of_approval_of_efc",
+            "districts_covered",
+            "gross_command_area",
+            "cca",
+            "irrigation_potential_in_rabi",
+            "irrigation_potential_in_kharif",
+            "requirement_of_water_for_project",
+            "availability_of_water_against_the_requirement",
+            "pre_project_crop_pattern_in_rabi",
+            "pre_project_crop_pattern_in_kharif",
+            "post_project_crop_pattern_in_rabi",
+            "post_project_crop_pattern_in_kharif",
+            "upload_complete_dpr_file_name",
+            "upload_complete_dpr_file_path",
+            "investment_clearence_file_name",
+            "investment_clearence_file_path",
+            "cwc_clearence_file_name",
+            "cwc_clearence_file_path",
+            "dpr_approval_by_efc_file_name",
+            "dpr_approval_by_efc_file_path",
+            "survey_reports_file_name",
+            "survey_reports_file_path",
         ]
         for i in range(1, 7):
-            dpr_columns.extend(
-                [
-                    f"date_of_approval_revised_dpr_revision_{i} TEXT",
-                    f"amount_of_revised_dpr_revision_{i} TEXT",
-                    f"target_date_to_complete_project_revision_{i} TEXT",
-                ]
+            dpr_columns.extend([
+                f"date_of_approval_revised_dpr_revision_{i}",
+                f"amount_of_revised_dpr_revision_{i}",
+                f"target_date_to_complete_project_revision_{i}",
+            ])
+        for col_name in dpr_columns:
+            cur.execute(
+                sql.SQL("ALTER TABLE project_dpr ADD COLUMN IF NOT EXISTS {} TEXT").format(
+                    sql.Identifier(col_name)
+                )
             )
-        for col_def in dpr_columns:
-            cur.execute(f"ALTER TABLE project_dpr ADD COLUMN IF NOT EXISTS {col_def}")
         conn.commit()
         return True
     except Exception as e:
@@ -2043,9 +2065,11 @@ def toggle_user_status(user_id, current_status):
         conn.commit()
         get_all_users_admin.clear()
         get_user_by_id.clear()
+        return True, None
     except Exception as e:
         report_error("Error toggling user status.", e, "crud.toggle_user_status")
         _rollback_db(conn)
+        return False, str(e)
     finally:
         _cleanup_db(conn, cur)
 
@@ -2063,8 +2087,10 @@ def update_user_modules(user_id, modules_list):
         conn.commit()
         get_all_users_admin.clear()
         get_user_by_id.clear()
+        return True, None
     except Exception as e:
         report_error("Error updating user modules.", e, "crud.update_user_modules")
         _rollback_db(conn)
+        return False, str(e)
     finally:
         _cleanup_db(conn, cur)
