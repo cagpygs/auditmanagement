@@ -25,6 +25,7 @@ from crud import (
     save_draft_record,
     ensure_contract_quality_table_schema,
     ensure_project_dpr_table,
+    ensure_technical_inspection_table,
     set_drafts_to_final,
     toggle_user_status,
     upsert_project_dpr,
@@ -105,8 +106,28 @@ CUSTOM_TABLE_ORDER = {
         "contract_management_contract_master",
         "contract_management_payments_recoveries",
         "contract_management_budget_summary",
+        "contract_management_technical_inspection",
     ]
 }
+
+TECH_INSPECTION_TABLE = "contract_management_technical_inspection"
+TECH_INSPECTION_TYPES = [
+    ("ce",  "CE Site Inspection"),
+    ("se",  "SE Site Inspection"),
+    ("ee",  "EE Site Inspection"),
+    ("tac", "TAC Inspection"),
+]
+TECH_INSPECTION_FIELDS = [
+    ("contractual_compliance",           "Contractual Compliance"),
+    ("functionality_design_intent",      "Functionality & Design Intent"),
+    ("environmental_social_aspects",     "Environmental & Social Aspects"),
+    ("safety_measures",                  "Safety Measures"),
+    ("measurement_records",              "Measurement & Records"),
+    ("progress_of_work",                 "Progress of Work"),
+    ("workmanship_construction_quality", "Workmanship & Construction Quality"),
+    ("quality_of_materials",             "Quality of Materials"),
+    ("conformity_design_drawings",       "Conformity with Design & Drawings"),
+]
 
 # =====================================================
 # ====  URL QUERY PARAM HANDLER (global, top) =========
@@ -244,6 +265,8 @@ if "project_dpr_table_ready" not in st.session_state:
     st.session_state.project_dpr_table_ready = ensure_project_dpr_table()
 if "quality_table_schema_ready" not in st.session_state:
     st.session_state.quality_table_schema_ready = ensure_contract_quality_table_schema()
+if "tech_inspection_table_ready" not in st.session_state:
+    st.session_state.tech_inspection_table_ready = ensure_technical_inspection_table()
 if "mini_dashboard_filter" not in st.session_state:
     st.session_state.mini_dashboard_filter = "DPR"
 
@@ -4999,6 +5022,140 @@ if not is_admin:
                     except Exception as e:
                         report_error("Failed to save section.", e, "app.save_first_section")
                         st.stop()
+
+            # ---- TECHNICAL INSPECTION TAB ----
+            elif table == TECH_INSPECTION_TABLE:
+                # Load existing draft to pre-fill
+                ti_draft = get_user_draft(table, user_id, master_id=st.session_state.master_id)
+
+                # ── General Info section ──────────────────────────────────────
+                st.markdown("""
+                <div style="font-size:13px; font-weight:700; color:#1a3a6b;
+                            border-bottom:2px solid #e8ecf1; padding-bottom:6px; margin-bottom:14px;">
+                    General Information
+                </div>
+                """, unsafe_allow_html=True)
+
+                def _ti_init(col_name, default=""):
+                    key = f"{table}_{col_name}"
+                    if key not in st.session_state:
+                        raw = (ti_draft or {}).get(col_name)
+                        if raw is None:
+                            st.session_state[key] = default
+                        elif col_name.startswith("date_"):
+                            if isinstance(raw, datetime.datetime):
+                                st.session_state[key] = raw.date()
+                            elif isinstance(raw, datetime.date):
+                                st.session_state[key] = raw
+                            else:
+                                try:
+                                    st.session_state[key] = datetime.date.fromisoformat(str(raw)[:10])
+                                except (TypeError, ValueError):
+                                    st.session_state[key] = None
+                        else:
+                            st.session_state[key] = str(raw)
+                    return f"{table}_{col_name}"
+
+                gc1, gc2, gc3 = st.columns(3)
+                with gc1:
+                    yr_key = _ti_init("year_of_estimate", year_of_estimate or "")
+                    st.session_state[yr_key] = str(year_of_estimate or "")
+                    st.text_input("Year of Estimate", key=yr_key, disabled=True)
+                with gc2:
+                    ag_key = _ti_init("agreement_number", "")
+                    st.text_input("Agreement Number", key=ag_key, disabled=not can_edit)
+                with gc3:
+                    np_key = _ti_init("name_of_project", name_of_project or "")
+                    st.session_state[np_key] = str(name_of_project or "")
+                    st.text_input("Name of Project", key=np_key, disabled=True)
+
+                ns_col, _ = st.columns(2)
+                with ns_col:
+                    ns_key = _ti_init("name_of_structure", "")
+                    st.text_input("Name of Structure", key=ns_key, disabled=not can_edit)
+
+                dc1, dc2, dc3, dc4 = st.columns(4)
+                date_fields_info = [
+                    ("date_of_ce_site_inspection", "Date of CE's Site Inspection", dc1),
+                    ("date_of_se_site_inspection", "Date of SE's Site Inspection", dc2),
+                    ("date_of_ee_site_inspection", "Date of EE's Site Inspection", dc3),
+                    ("date_of_tac_inspection",     "Date of TAC Inspection",       dc4),
+                ]
+                for date_col, date_label, date_widget_col in date_fields_info:
+                    dk = _ti_init(date_col, None)
+                    with date_widget_col:
+                        st.date_input(date_label, key=dk, disabled=not can_edit)
+
+                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                if can_edit and st.button("Save General Info", key=f"save_{table}_general", use_container_width=True):
+                    if not first_table_draft:
+                        st.warning("Please complete the first section before saving this one.")
+                        st.stop()
+                    general_data = {
+                        "estimate_number":  estimate_number,
+                        "year_of_estimate": year_of_estimate,
+                        "name_of_project":  name_of_project,
+                        "agreement_number": st.session_state.get(ag_key) or None,
+                        "name_of_structure": st.session_state.get(ns_key) or None,
+                    }
+                    for date_col, _, _ in date_fields_info:
+                        dk = f"{table}_{date_col}"
+                        val = st.session_state.get(dk)
+                        general_data[date_col] = str(val) if val else None
+                    try:
+                        save_draft_record(table, general_data, user_id, master_id=st.session_state.master_id)
+                        set_flash_message("success", "General Information saved successfully!")
+                        st.toast("General info saved.")
+                        st.rerun()
+                    except Exception as e:
+                        report_error("Failed to save general info.", e, "app.save_ti_general")
+                        st.stop()
+
+                st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+                # ── Inspection details sub-tabs ───────────────────────────────
+                st.markdown("""
+                <div style="font-size:13px; font-weight:700; color:#1a3a6b;
+                            border-bottom:2px solid #e8ecf1; padding-bottom:6px; margin-bottom:14px;">
+                    Inspection Details
+                </div>
+                """, unsafe_allow_html=True)
+
+                insp_tab_labels = [label for _, label in TECH_INSPECTION_TYPES]
+                insp_tabs = st.tabs(insp_tab_labels)
+                for (insp_prefix, _), insp_tab in zip(TECH_INSPECTION_TYPES, insp_tabs):
+                    with insp_tab:
+                        col1, col2 = st.columns(2)
+                        tab_form_data = {
+                            "estimate_number": estimate_number,
+                            "year_of_estimate": year_of_estimate,
+                            "name_of_project":  name_of_project,
+                        }
+                        for idx, (field_key, field_label) in enumerate(TECH_INSPECTION_FIELDS):
+                            col_name = f"{insp_prefix}_{field_key}"
+                            key = f"{table}_{col_name}"
+                            if key not in st.session_state:
+                                raw = (ti_draft or {}).get(col_name)
+                                st.session_state[key] = str(raw) if raw is not None else ""
+                            target_col = col1 if idx % 2 == 0 else col2
+                            with target_col:
+                                value = st.text_input(field_label, key=key, disabled=not can_edit)
+                            tab_form_data[col_name] = value
+
+                        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                        if can_edit and st.button("Save Section", key=f"save_{table}_{insp_prefix}", use_container_width=True, type="primary"):
+                            if not first_table_draft:
+                                st.warning("Please complete the first section before saving this one.")
+                                st.stop()
+                            try:
+                                save_draft_record(table, tab_form_data, user_id, master_id=st.session_state.master_id)
+                                section_label = f"Technical Inspection — {dict(TECH_INSPECTION_TYPES)[insp_prefix]}"
+                                set_flash_message("success", f"{section_label} saved successfully!")
+                                st.toast("Inspection data saved.")
+                                st.rerun()
+                            except Exception as e:
+                                report_error("Failed to save technical inspection.", e, "app.save_technical_inspection")
+                                st.stop()
 
             # ---- OTHER TABS ----
             else:

@@ -901,6 +901,87 @@ def ensure_contract_quality_table_schema():
         _cleanup_db(conn, cur)
 
 
+def ensure_technical_inspection_table():
+    table_name = "contract_management_technical_inspection"
+    conn = None
+    cur = None
+    inspection_cols = [
+        "ce_contractual_compliance", "ce_functionality_design_intent",
+        "ce_environmental_social_aspects", "ce_safety_measures",
+        "ce_measurement_records", "ce_progress_of_work",
+        "ce_workmanship_construction_quality", "ce_quality_of_materials",
+        "ce_conformity_design_drawings",
+        "se_contractual_compliance", "se_functionality_design_intent",
+        "se_environmental_social_aspects", "se_safety_measures",
+        "se_measurement_records", "se_progress_of_work",
+        "se_workmanship_construction_quality", "se_quality_of_materials",
+        "se_conformity_design_drawings",
+        "ee_contractual_compliance", "ee_functionality_design_intent",
+        "ee_environmental_social_aspects", "ee_safety_measures",
+        "ee_measurement_records", "ee_progress_of_work",
+        "ee_workmanship_construction_quality", "ee_quality_of_materials",
+        "ee_conformity_design_drawings",
+        "tac_contractual_compliance", "tac_functionality_design_intent",
+        "tac_environmental_social_aspects", "tac_safety_measures",
+        "tac_measurement_records", "tac_progress_of_work",
+        "tac_workmanship_construction_quality", "tac_quality_of_materials",
+        "tac_conformity_design_drawings",
+    ]
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            sql.SQL("""
+                CREATE TABLE IF NOT EXISTS {table} (
+                    id SERIAL PRIMARY KEY,
+                    name_of_project TEXT,
+                    estimate_number TEXT,
+                    year_of_estimate TEXT,
+                    status TEXT DEFAULT 'Pending',
+                    created_by INTEGER,
+                    is_draft BOOLEAN DEFAULT TRUE,
+                    master_id INTEGER,
+                    approval_status TEXT,
+                    draft_id TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """).format(table=sql.Identifier(table_name))
+        )
+        header_cols = [
+            ("agreement_number",              "TEXT"),
+            ("name_of_structure",             "TEXT"),
+            ("date_of_ce_site_inspection",    "DATE"),
+            ("date_of_se_site_inspection",    "DATE"),
+            ("date_of_ee_site_inspection",    "DATE"),
+            ("date_of_tac_inspection",        "DATE"),
+        ]
+        for col_name, col_type in header_cols:
+            cur.execute(
+                sql.SQL("ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_type}")
+                .format(
+                    table=sql.Identifier(table_name),
+                    col=sql.Identifier(col_name),
+                    col_type=sql.SQL(col_type),
+                )
+            )
+        for col_name in inspection_cols:
+            cur.execute(
+                sql.SQL("ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} TEXT")
+                .format(
+                    table=sql.Identifier(table_name),
+                    col=sql.Identifier(col_name),
+                )
+            )
+        conn.commit()
+        return True
+    except Exception as e:
+        report_error("Error ensuring technical inspection table.", e, "crud.ensure_technical_inspection_table")
+        _rollback_db(conn)
+        return False
+    finally:
+        _cleanup_db(conn, cur)
+
+
 def get_master_ids_with_table_data(master_ids, tables):
     """
     Returns the subset of `master_ids` that have at least one row in any of `tables`.
