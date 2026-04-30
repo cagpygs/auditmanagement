@@ -1026,6 +1026,29 @@
     color: #0f172a !important;
 }
 
+/* ── Back button: st.button styled as circular icon ── */
+[data-testid="stMarkdown"]:has(.iidms-back-trigger) + [data-testid="stButton"] button {
+    width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    background: #e2e8f0 !important;
+    border: none !important;
+    color: #64748b !important;
+    font-size: 20px !important;
+    box-shadow: none !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background 0.15s, color 0.15s !important;
+}
+[data-testid="stMarkdown"]:has(.iidms-back-trigger) + [data-testid="stButton"] button:hover {
+    background: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
 .iidms-project-title {
     font-size: 24px;
     font-weight: 800;

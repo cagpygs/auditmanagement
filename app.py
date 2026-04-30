@@ -913,12 +913,10 @@ def restore_module_return_flow():
     return True
 
 
-def render_back_link(back_key):
-    try:
-        clicked = st.button("<- Back", key=back_key, type="tertiary")
-    except Exception:
-        clicked = st.button("<- Back", key=f"{back_key}_fallback")
-    if clicked:
+def render_back_link(back_key=None):
+    _key = back_key or "back_link_default"
+    st.markdown('<div class="iidms-back-trigger"></div>', unsafe_allow_html=True)
+    if st.button("←", key=_key):
         st.session_state.pop("show_up_id", None)
         back_flow_page()
         st.rerun()
@@ -1147,9 +1145,7 @@ def render_submission_details_page(sub):
         )
 
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-    if st.button("<- Back", key=f"back_sub_bottom_{sub_id}", use_container_width=True):
-        back_flow_page()
-        st.rerun()
+    render_back_link(f"back_sub_bottom_{sub_id}")
 
 
 def render_estimate_group_page(est_no, est_yr, user_id=None, module=None):
@@ -1357,9 +1353,7 @@ def render_duplicate_submission_page(data=None):
     else:
         st.error("Submission already completed. This estimate cannot be modified or duplicated.")
 
-    if st.button("<- Back to Start", key="back_duplicate_bottom", use_container_width=True):
-        back_flow_page()
-        st.rerun()
+    render_back_link("back_duplicate_bottom")
 
 
 def build_contract_project_catalog(prefill_project=None):
@@ -2622,18 +2616,21 @@ def render_project_detail_page(flow_data=None):
     completed_count = max(len(all_project_contracts) - draft_count, 0)
 
     # -- IIDMS Project Header --
-    back_href = "./?nav=Main"
-    st.markdown(f"""
-    <div class="iidms-project-header">
+    _safe_proj = _safe_key(project_name)
+    st.markdown('<div class="iidms-project-header">', unsafe_allow_html=True)
+    _col_back, _col_title = st.columns([0.6, 9.4])
+    with _col_back:
+        render_back_link(f"back_proj_{_safe_proj}")
+    with _col_title:
+        st.markdown(f"""
         <div class="iidms-project-header-left">
-            <a href="{back_href}" target="_self" class="iidms-back-arrow">&larr;</a>
             <div>
                 <div class="iidms-project-title">{esc_html(project_name)}</div>
                 <div class="iidms-project-subtitle">EXECUTING DIVISION: IRRIGATION</div>
             </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # -- 4 Stat Cards --
     st.markdown(f"""
@@ -2661,8 +2658,8 @@ def render_project_detail_page(flow_data=None):
     </div>
     """, unsafe_allow_html=True)
 
-    # -- Tabs: DPR Details | Estimates | Contracts --
-    tab_dpr, tab_est, tab_con = st.tabs(["DPR Details", "Estimates", "Contracts"])
+    # -- Tabs: DPR Details | Estimates | Contracts | Performance --
+    tab_dpr, tab_est, tab_con, tab_perf = st.tabs(["DPR Details", "Estimates", "Contracts", "Performance"])
 
     # -- TAB 1: DPR Details --
     with tab_dpr:
@@ -2921,23 +2918,77 @@ def render_project_detail_page(flow_data=None):
             )
             st.markdown(table_html, unsafe_allow_html=True)
 
+    # -- TAB 4: Performance --
+    with tab_perf:
+        structures = [
+            {"sno": 1, "name": "Dam",          "nav": None},
+            {"sno": 2, "name": "Reservoir",    "nav": None},
+            {"sno": 3, "name": "Canal System", "nav": "CanalPerformance"},
+        ]
+
+        _th = (
+            "padding:14px 20px;font-size:11px;font-weight:700;color:#94A3B8;"
+            "text-transform:uppercase;letter-spacing:.07em;text-align:left;"
+            "border-bottom:1px solid #E2E8F0;background:#fff;"
+        )
+        _td_sno = (
+            "padding:18px 20px;font-size:14px;font-weight:700;color:#64748B;"
+            "width:100px;border-bottom:1px solid #F1F5F9;vertical-align:middle;"
+        )
+        _td_name = (
+            "padding:18px 20px;font-size:15px;font-weight:700;color:#1E293B;"
+            "border-bottom:1px solid #F1F5F9;vertical-align:middle;"
+        )
+        _link_style = (
+            "color:#2563EB;font-weight:700;text-decoration:none;"
+            "display:inline-flex;align-items:center;gap:6px;"
+        )
+
+        rows_html = ""
+        for s in structures:
+            sno_str = f"{s['sno']:02d}"
+            if s["nav"]:
+                name_cell = (
+                    f'<td style="{_td_name}">'
+                    f'<a href="./?nav={s["nav"]}" target="_self" style="{_link_style}">'
+                    f'{s["name"]}'
+                    f'<svg width="13" height="13" viewBox="0 0 12 12" fill="none" '
+                    f'xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;margin-bottom:1px;">'
+                    f'<path d="M2 10L10 2M10 2H4M10 2V8" stroke="#2563EB" '
+                    f'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
+                    f'</svg></a></td>'
+                )
+            else:
+                name_cell = f'<td style="{_td_name}">{s["name"]}</td>'
+            rows_html += (
+                f'<tr>'
+                f'<td style="{_td_sno}">{sno_str}</td>'
+                f'{name_cell}'
+                f'</tr>'
+            )
+
+        perf_table_html = f"""
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;
+                    overflow:hidden;box-shadow:0 1px 4px rgba(20,31,63,.05);">
+          <table style="width:100%;border-collapse:collapse;
+                        font-family:'Inter','Source Sans 3',sans-serif;">
+            <thead>
+              <tr>
+                <th style="{_th}width:100px;">SR. NO.</th>
+                <th style="{_th}">NAME OF STRUCTURE</th>
+              </tr>
+            </thead>
+            <tbody>{rows_html}</tbody>
+          </table>
+        </div>
+        """
+        st.markdown(perf_table_html, unsafe_allow_html=True)
+
 def render_new_application_page(flow_data=None):
     flow_data = flow_data or {}
     render_flow_header("", back_key="back_new_app_top", align="center")
     project_placeholder = "-- Select Project --"
     created_projects_key = "created_projects_store"
-
-    module_options = list(module_display_map.keys())
-    if not module_options:
-        st.warning("No modules have been assigned to your account yet.")
-        return
-
-    selected_module_key = "new_app_module_select"
-    prefill_module = flow_data.get("module")
-    if prefill_module in module_options:
-        st.session_state[selected_module_key] = prefill_module
-    elif st.session_state.get(selected_module_key) not in module_options:
-        st.session_state[selected_module_key] = module_options[0]
 
     prefill_project = (flow_data.get("prefill_name_of_project") or "").strip()
     merged_projects = build_contract_project_catalog(prefill_project=prefill_project)
@@ -2969,62 +3020,33 @@ def render_new_application_page(flow_data=None):
                     <div class="np-card-intro-sub"></div>
                 </div>
             </div>""", unsafe_allow_html=True)
-            selected_m = st.selectbox(
-                "Select Module",
-                options=module_options,
-                format_func=lambda x: module_display_map[x],
-                key=selected_module_key,
+            st.selectbox(
+                "Select Project",
+                options=project_options,
+                key="new_app_project_name",
+                help="Select an existing project name from the list.",
                 label_visibility="visible",
             )
-
-            if selected_m == "contract_management":
-                st.selectbox(
-                    "Select Project",
-                    options=project_options,
-                    key="new_app_project_name",
-                    help="Select an existing project name from the list.",
-                    label_visibility="visible",
+            if st.button("Select Project", key="btn_create_project", use_container_width=True, type="primary"):
+                selected_project = (st.session_state.get("new_app_project_name") or "").strip()
+                if not selected_project or selected_project == project_placeholder:
+                    st.error("Please select a project name first.")
+                    return
+                current_projects = st.session_state.get(created_projects_key, [])
+                exists = any((p.get("project_name") or "").strip().lower() == selected_project.lower() for p in current_projects)
+                if not exists:
+                    current_projects.insert(0, {
+                        "project_name": selected_project,
+                        "created_at": datetime.datetime.now().isoformat(),
+                        "estimate_count": 0,
+                    })
+                    st.session_state[created_projects_key] = current_projects
+                open_flow_page(
+                    "project_detail",
+                    data={"project_name": selected_project, "module": "contract_management"},
+                    push_history=True,
                 )
-                if st.button("Select Project", key="btn_create_project", use_container_width=True, type="primary"):
-                    selected_project = (st.session_state.get("new_app_project_name") or "").strip()
-                    if not selected_project or selected_project == project_placeholder:
-                        st.error("Please select a project name first.")
-                        return
-                    current_projects = st.session_state.get(created_projects_key, [])
-                    exists = any((p.get("project_name") or "").strip().lower() == selected_project.lower() for p in current_projects)
-                    if not exists:
-                        current_projects.insert(0, {
-                            "project_name": selected_project,
-                            "created_at": datetime.datetime.now().isoformat(),
-                            "estimate_count": 0,
-                        })
-                        st.session_state[created_projects_key] = current_projects
-                    open_flow_page(
-                        "project_detail",
-                        data={"project_name": selected_project, "module": "contract_management"},
-                        push_history=True,
-                    )
-                    st.rerun()
-            else:
-                if st.button("Start Application →", use_container_width=True, type="primary"):
-                    clear_module_state(selected_m)
-                    try:
-                        target_m_id = create_master_submission(
-                            user_id,
-                            selected_m,
-                            modules.get(selected_m, []),
-                            status="DRAFT",
-                            estimate_number=None,
-                            year_of_estimate=None,
-                            name_of_project=None,
-                        )
-                        st.session_state.master_id = target_m_id
-                        st.session_state.current_view = selected_m
-                        remember_flow_return_for_module()
-                        close_flow_page()
-                        st.rerun()
-                    except Exception as e:
-                        report_error("Error starting application.", e, "app.render_new_application_page")
+                st.rerun()
 
 def render_active_flow_page():
     page = st.session_state.get("flow_page")
@@ -3205,6 +3227,13 @@ elif st.query_params.get("nav") == "AboutDept":
     st.rerun()
 elif st.query_params.get("nav") == "MSI":
     st.session_state.current_view = "MSI"
+    st.query_params.clear()
+    st.rerun()
+elif st.query_params.get("nav") == "CanalPerformance":
+    clear_module_state("canal_performance")
+    st.session_state.current_view = "canal_performance"
+    remember_flow_return_for_module()
+    close_flow_page()
     st.query_params.clear()
     st.rerun()
 elif st.query_params.get("nav") == "NewApp":
@@ -4961,6 +4990,21 @@ if not is_admin:
                                 disabled=is_disabled,
                             )
                             value = True if sel == "Yes" else (False if sel == "No" else None)
+                        elif col == "reason_for_non_adherence_to_schedule_timeline":
+                            _reason_opts = [
+                                "",
+                                "Non-availability of land",
+                                "Non-availability of site",
+                                "Non-availability of design and drawing",
+                                "Non-availability of funds",
+                                "Non-availability of materials",
+                                "Natural calamity",
+                                "Slow progress by contractor",
+                                "Others",
+                            ]
+                            _curr = st.session_state.get(key, "")
+                            _ridx = _reason_opts.index(_curr) if _curr in _reason_opts else 0
+                            value = st.selectbox(label, options=_reason_opts, index=_ridx, key=key, disabled=is_disabled)
                         else:
                             value = st.text_input(label, key=key, disabled=is_disabled)
 
@@ -5104,15 +5148,23 @@ if not is_admin:
                         with st.form(key=f"ti_form_{table}_{insp_prefix}"):
                             col1, col2 = st.columns(2)
                             tab_form_data = {}
+                            _yn_options = ["Yes", "No"]
                             for idx, (field_key, field_label) in enumerate(TECH_INSPECTION_FIELDS):
                                 col_name = f"{insp_prefix}_{field_key}"
                                 fkey = f"{table}_{col_name}"
-                                if fkey not in st.session_state:
-                                    raw = (ti_draft or {}).get(col_name)
-                                    st.session_state[fkey] = str(raw) if raw is not None else ""
+                                raw = (ti_draft or {}).get(col_name)
+                                saved_val = str(raw) if raw in _yn_options else None
+                                idx_val = _yn_options.index(saved_val) if saved_val else None
                                 target_col = col1 if idx % 2 == 0 else col2
                                 with target_col:
-                                    value = st.text_input(field_label, key=fkey, disabled=not can_edit)
+                                    value = st.selectbox(
+                                        field_label,
+                                        options=_yn_options,
+                                        index=idx_val,
+                                        placeholder="Select…",
+                                        key=fkey,
+                                        disabled=not can_edit,
+                                    )
                                 tab_form_data[col_name] = value
 
                             st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
@@ -5196,6 +5248,21 @@ if not is_admin:
                                   idx = 2
                               sel = st.selectbox(label, options=bool_options, index=idx, key=f"{key}_select")
                               value = True if sel == "Yes" else (False if sel == "No" else None)
+                          elif col == "reason_for_non_adherence_to_schedule_timeline":
+                              _reason_opts = [
+                                  "",
+                                  "Non-availability of land",
+                                  "Non-availability of site",
+                                  "Non-availability of design and drawing",
+                                  "Non-availability of funds",
+                                  "Non-availability of materials",
+                                  "Natural calamity",
+                                  "Slow progress by contractor",
+                                  "Others",
+                              ]
+                              _curr = st.session_state.get(key, "")
+                              _ridx = _reason_opts.index(_curr) if _curr in _reason_opts else 0
+                              value = st.selectbox(label, options=_reason_opts, index=_ridx, key=key)
                           else:
                               value = st.text_input(label, key=key)
 
