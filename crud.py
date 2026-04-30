@@ -136,8 +136,8 @@ def get_db_pool():
     if not db_password:
         raise RuntimeError("DB_PASSWORD is not configured. Set it in environment or Streamlit secrets.")
 
-    min_conn = _read_int_setting("DB_POOL_MINCONN", 1, minimum=1)
-    max_conn = _read_int_setting("DB_POOL_MAXCONN", 80, minimum=min_conn)
+    min_conn = _read_int_setting("DB_POOL_MINCONN", 2, minimum=1)
+    max_conn = _read_int_setting("DB_POOL_MAXCONN", 200, minimum=min_conn)
 
     return pool.ThreadedConnectionPool(
         min_conn, max_conn,
@@ -533,7 +533,7 @@ def update_master_status(master_id, status):
 # ================= GET USER MASTER SUBMISSIONS =================
 
 @st.cache_data(ttl=30)
-def get_user_master_submissions(user_id, module):
+def get_user_master_submissions(user_id, module, limit=200, offset=0):
     conn = None
     cur = None
     try:
@@ -549,7 +549,8 @@ def get_user_master_submissions(user_id, module):
                 AND m.module=%s
                 AND m.status = 'COMPLETED'
                 ORDER BY m.cycle DESC
-            """, (user_id, module))
+                LIMIT %s OFFSET %s
+            """, (user_id, module, limit, offset))
         else:
             cur.execute("""
                 SELECT m.*, u.username as created_by_user
@@ -558,7 +559,8 @@ def get_user_master_submissions(user_id, module):
                 WHERE m.user_id=%s
                 AND m.status = 'COMPLETED'
                 ORDER BY m.cycle DESC
-            """, (user_id,))
+                LIMIT %s OFFSET %s
+            """, (user_id, limit, offset))
             
         columns = [desc[0] for desc in cur.description]
         records = [dict(zip(columns, row)) for row in cur.fetchall()]
@@ -571,7 +573,7 @@ def get_user_master_submissions(user_id, module):
 
 
 @st.cache_data(ttl=30)
-def get_user_master_submissions_admin(user_id):
+def get_user_master_submissions_admin(user_id, limit=200, offset=0):
     conn = None
     cur = None
     try:
@@ -585,7 +587,8 @@ def get_user_master_submissions_admin(user_id):
             WHERE m.user_id=%s
             AND m.status = 'COMPLETED'
             ORDER BY m.cycle DESC
-        """, (user_id,))
+            LIMIT %s OFFSET %s
+        """, (user_id, limit, offset))
 
         columns = [desc[0] for desc in cur.description]
         records = [dict(zip(columns, row)) for row in cur.fetchall()]
@@ -1685,6 +1688,7 @@ def get_user_draft_summaries(user_id):
             JOIN users u ON m.user_id = u.id
             WHERE m.user_id=%s AND m.status='DRAFT'
             ORDER BY m.created_at DESC
+            LIMIT 200
         """, (user_id,))
             
         columns = [desc[0] for desc in cur.description]

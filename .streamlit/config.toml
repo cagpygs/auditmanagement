@@ -1,3 +1,13 @@
+[server]
+maxUploadSize = 50
+maxMessageSize = 50
+enableXsrfProtection = true
+enableCORS = false
+headless = true
+
+[browser]
+gatherUsageStats = false
+
 [theme]
 primaryColor = "#2563eb"
 backgroundColor = "#f8fafc"
