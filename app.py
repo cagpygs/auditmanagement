@@ -4746,12 +4746,20 @@ if not is_admin:
     # --- Tabs ---
     st.markdown('<div class="module-form-tabs-trigger"></div>', unsafe_allow_html=True)
     tab_label_by_table = {}
-    green_dot = "\U0001F7E2"
-    yellow_dot = "\U0001F7E1"
-    for table in tables:
+    saved_tab_css = []
+    for i, table in enumerate(tables):
         section_name = table.replace(prefix, "").replace("_", " ").title()
         is_complete = is_section_complete(user_id, table, master_id=st.session_state.master_id)
-        tab_label_by_table[table] = f"{green_dot} {section_name}" if is_complete else f"{yellow_dot} {section_name}"
+        tab_label_by_table[table] = section_name
+        if is_complete:
+            n = i + 1
+            saved_tab_css.append(
+                f"body:has(.module-form-tabs-trigger) [data-testid='stRadio']"
+                f" [role='radiogroup'] label:nth-child({n}):not(:has(input:checked))"
+                f"{{background:#F0FDF4!important;color:#16A34A!important;border-color:#86EFAC!important;}}"
+            )
+    if saved_tab_css:
+        st.markdown(f"<style>{''.join(saved_tab_css)}</style>", unsafe_allow_html=True)
 
     active_tab_key = f"active_module_table_{module_name}"
     if active_tab_key not in st.session_state or st.session_state.get(active_tab_key) not in tables:
@@ -5086,70 +5094,54 @@ if not is_admin:
                     with date_widget_col:
                         st.date_input(date_label, key=dk, disabled=not can_edit)
 
-                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-                if can_edit and st.button("Save General Info", key=f"save_{table}_general", use_container_width=True):
-                    if not first_table_draft:
-                        st.warning("Please complete the first section before saving this one.")
-                        st.stop()
-                    general_data = {
-                        "estimate_number":  estimate_number,
-                        "year_of_estimate": year_of_estimate,
-                        "name_of_project":  name_of_project,
-                        "agreement_number": st.session_state.get(ag_key) or None,
-                        "name_of_structure": st.session_state.get(ns_key) or None,
-                    }
-                    for date_col, _, _ in date_fields_info:
-                        dk = f"{table}_{date_col}"
-                        val = st.session_state.get(dk)
-                        general_data[date_col] = str(val) if val else None
-                    try:
-                        save_draft_record(table, general_data, user_id, master_id=st.session_state.master_id)
-                        set_flash_message("success", "General Information saved successfully!")
-                        st.toast("General info saved.")
-                        st.rerun()
-                    except Exception as e:
-                        report_error("Failed to save general info.", e, "app.save_ti_general")
-                        st.stop()
-
                 st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-                # ── Inspection details sub-tabs ───────────────────────────────
-                st.markdown("""
-                <div style="font-size:13px; font-weight:700; color:#1a3a6b;
-                            border-bottom:2px solid #e8ecf1; padding-bottom:6px; margin-bottom:14px;">
-                    Inspection Details
-                </div>
-                """, unsafe_allow_html=True)
-
+                # ── CE / SE / EE / TAC sub-tabs ──────────────────────────────
                 insp_tab_labels = [label for _, label in TECH_INSPECTION_TYPES]
                 insp_tabs = st.tabs(insp_tab_labels)
-                for (insp_prefix, _), insp_tab in zip(TECH_INSPECTION_TYPES, insp_tabs):
+                for (insp_prefix, insp_label), insp_tab in zip(TECH_INSPECTION_TYPES, insp_tabs):
                     with insp_tab:
-                        col1, col2 = st.columns(2)
-                        tab_form_data = {
-                            "estimate_number": estimate_number,
-                            "year_of_estimate": year_of_estimate,
-                            "name_of_project":  name_of_project,
-                        }
-                        for idx, (field_key, field_label) in enumerate(TECH_INSPECTION_FIELDS):
-                            col_name = f"{insp_prefix}_{field_key}"
-                            key = f"{table}_{col_name}"
-                            if key not in st.session_state:
-                                raw = (ti_draft or {}).get(col_name)
-                                st.session_state[key] = str(raw) if raw is not None else ""
-                            target_col = col1 if idx % 2 == 0 else col2
-                            with target_col:
-                                value = st.text_input(field_label, key=key, disabled=not can_edit)
-                            tab_form_data[col_name] = value
+                        with st.form(key=f"ti_form_{table}_{insp_prefix}"):
+                            col1, col2 = st.columns(2)
+                            tab_form_data = {}
+                            for idx, (field_key, field_label) in enumerate(TECH_INSPECTION_FIELDS):
+                                col_name = f"{insp_prefix}_{field_key}"
+                                fkey = f"{table}_{col_name}"
+                                if fkey not in st.session_state:
+                                    raw = (ti_draft or {}).get(col_name)
+                                    st.session_state[fkey] = str(raw) if raw is not None else ""
+                                target_col = col1 if idx % 2 == 0 else col2
+                                with target_col:
+                                    value = st.text_input(field_label, key=fkey, disabled=not can_edit)
+                                tab_form_data[col_name] = value
 
-                        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-                        if can_edit and st.button("Save Section", key=f"save_{table}_{insp_prefix}", use_container_width=True, type="primary"):
+                            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+                            submitted = st.form_submit_button(
+                                "Save Section",
+                                use_container_width=True,
+                                type="primary",
+                                disabled=not can_edit,
+                            )
+
+                        if submitted:
                             if not first_table_draft:
                                 st.warning("Please complete the first section before saving this one.")
                                 st.stop()
+                            # Merge general info + this tab's fields into one save
+                            save_data = {
+                                "estimate_number":   estimate_number,
+                                "year_of_estimate":  year_of_estimate,
+                                "name_of_project":   name_of_project,
+                                "agreement_number":  st.session_state.get(ag_key) or None,
+                                "name_of_structure": st.session_state.get(ns_key) or None,
+                            }
+                            for date_col, _, _ in date_fields_info:
+                                val = st.session_state.get(f"{table}_{date_col}")
+                                save_data[date_col] = str(val) if val else None
+                            save_data.update(tab_form_data)
                             try:
-                                save_draft_record(table, tab_form_data, user_id, master_id=st.session_state.master_id)
-                                section_label = f"Technical Inspection — {dict(TECH_INSPECTION_TYPES)[insp_prefix]}"
+                                save_draft_record(table, save_data, user_id, master_id=st.session_state.master_id)
+                                section_label = f"Technical Inspection — {insp_label}"
                                 set_flash_message("success", f"{section_label} saved successfully!")
                                 st.toast("Inspection data saved.")
                                 st.rerun()

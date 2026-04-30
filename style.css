@@ -1271,64 +1271,67 @@ footer,
     font-size: 13px;
 }
 
-/* Module form "tabs" implemented as a stateful radio group (keeps selection after save). */
+/* Module form tabs — flat pill style matching DPR v1-v6 tabs. */
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] [role="radiogroup"] {
     display: flex !important;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
-    padding: 6px;
-    border-radius: 999px;
-    border: 1px solid rgba(51, 73, 120, 0.18);
-    background: linear-gradient(180deg, rgba(244, 248, 255, 0.95) 0%, rgba(235, 242, 255, 0.92) 100%);
-    box-shadow: 0 12px 26px rgba(20, 31, 63, 0.08);
+    padding: 0 0 4px 0;
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    background: transparent;
+    box-shadow: none;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
 
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] [role="radiogroup"]::-webkit-scrollbar {
-    height: 6px;
+    height: 4px;
 }
 
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] [role="radiogroup"]::-webkit-scrollbar-thumb {
-    background: rgba(51, 73, 120, 0.18);
+    background: #e2e8f0;
     border-radius: 999px;
 }
 
-/* Hide the default radio control and make labels look like tabs. */
+/* Each tab pill — matches DPR revision tab style. */
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label {
     margin: 0 !important;
-    padding: 7px 12px !important;
-    border-radius: 999px !important;
-    border: 1px solid transparent !important;
-    background: transparent !important;
+    padding: 6px 14px !important;
+    border-radius: 8px !important;
+    border: 1.5px solid #E2E8F0 !important;
+    background: #FFFFFF !important;
     cursor: pointer;
     white-space: nowrap;
-    font-weight: 700;
-    color: rgba(26, 58, 107, 0.78) !important;
-    transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease, color 0.12s ease;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #64748B !important;
+    font-family: 'Inter', sans-serif !important;
+    letter-spacing: 0.3px;
+    transition: all 0.15s ease;
 }
 
-/* Streamlit/BaseWeb renders a separate radio glyph container inside each label. Hide it. */
+/* Hide the default radio glyph. */
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
     display: none !important;
 }
 
-body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label:hover {
-    background: rgba(255, 255, 255, 0.70) !important;
-    border-color: rgba(51, 73, 120, 0.14) !important;
-    transform: translateY(-1px);
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label:hover:not(:has(input:checked)) {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
 }
 
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] input {
     display: none !important;
 }
 
-/* Active tab: rely on :has to detect checked input inside the label. */
+/* Active tab — blue, same as DPR v1-v6. */
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label:has(input:checked) {
-    background: linear-gradient(180deg, #dff0ff 0%, #c9e6ff 100%) !important;
-    border-color: rgba(58, 124, 191, 0.45) !important;
-    box-shadow: 0 8px 16px rgba(58, 124, 191, 0.20);
-    color: #133a66 !important;
+    background: #2563EB !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    color: #FFFFFF !important;
 }
 
 /* Tighten vertical spacing around the selector. */
