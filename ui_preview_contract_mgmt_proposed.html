@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Contract Management – Before vs Proposed</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', 'Segoe UI', sans-serif; background: #f0f2f6; color: #1e3a5f; font-size: 14px; }
+
+.page-wrap { display: flex; gap: 0; }
+
+/* ── COLUMN LABELS ── */
+.col-label {
+  text-align: center; padding: 12px; font-size: 11px; font-weight: 800;
+  letter-spacing: 1.5px; text-transform: uppercase;
+}
+.col-label.before { background: #fef3c7; color: #92400e; }
+.col-label.after  { background: #dbeafe; color: #1e40af; }
+
+/* ── PANEL ── */
+.panel { width: 50%; padding: 28px 28px; min-height: 100vh; background: #f8fafc; border-right: 2px solid #e2e8f0; }
+.panel.after-panel { background: #f8fafc; border-right: none; }
+
+/* ═══════════════════════ BEFORE ═══════════════════════ */
+
+.before-module-label { font-size: 11px; font-weight: 700; color: #9ca3af; letter-spacing: 1px; text-transform: uppercase; }
+.before-module-title { font-size: 22px; font-weight: 800; color: #1a3a6b; }
+.before-module-desc  { margin-top: 4px; color: #6b7280; font-size: 13.5px; margin-bottom: 18px; }
+
+.before-progress {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 14px 18px; margin-bottom: 16px;
+}
+.prog-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+.prog-label { color: #6b7280; font-weight: 500; }
+.prog-pct   { color: #d97706; font-weight: 700; }
+.prog-bg    { background: #f1f5f9; border-radius: 99px; height: 8px; }
+.prog-fill  { height: 8px; border-radius: 99px; }
+.prog-sub   { margin-top: 6px; font-size: 12px; color: #9ca3af; }
+
+.helper-box {
+  background: #eff6ff; border-left: 3px solid #3b82f6;
+  padding: 10px 14px; border-radius: 6px; font-size: 13px; color: #1d4ed8;
+  margin-bottom: 16px;
+}
+
+.tabs-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 18px; }
+.tab { padding: 6px 13px; border-radius: 8px; border: 1.5px solid #e2e8f0;
+       background: #fff; color: #64748b; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.tab.active { background: #2563eb; border-color: transparent; color: #fff; }
+.tab.saved  { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
+
+.form-card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 22px 24px; margin-bottom: 18px;
+}
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.4px; }
+.form-input {
+  padding: 8px 11px; border: 1.5px solid #d1d5db; border-radius: 7px;
+  font-size: 13px; color: #111827; background: #fff;
+}
+.save-row { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+.save-btn { background: #2563eb; color: #fff; padding: 9px 24px; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.save-note { font-size: 12px; color: #94a3b8; font-style: italic; }
+
+.submit-card {
+  background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px;
+  padding: 18px 22px; display: flex; align-items: center; justify-content: space-between;
+}
+.submit-card h3 { color: #15803d; font-size: 15px; font-weight: 700; }
+.submit-card p  { color: #166534; font-size: 13px; margin-top: 3px; }
+.submit-btn { background: #16a34a; color: #fff; padding: 10px 26px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+
+/* ═══════════════════════ AFTER ═══════════════════════ */
+
+/* Breadcrumb */
+.breadcrumb { display: flex; align-items: center; gap: 6px; margin-bottom: 18px; }
+.breadcrumb a { font-size: 12px; color: #64748b; text-decoration: none; }
+.breadcrumb a:hover { color: #2563eb; }
+.breadcrumb .sep { color: #cbd5e1; font-size: 12px; }
+.breadcrumb .current { font-size: 12px; color: #1e3a5f; font-weight: 600; }
+
+/* Page header */
+.page-header {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 18px 22px; margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.page-header-left { display: flex; flex-direction: column; gap: 2px; }
+.page-header-badge {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: #2563eb;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+.page-header-title { font-size: 20px; font-weight: 800; color: #1a3a6b; }
+.page-header-sub   { font-size: 13px; color: #64748b; margin-top: 2px; }
+.page-header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.project-chip {
+  background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 6px 12px; font-size: 12px; color: #374151;
+}
+.project-chip strong { color: #1a3a6b; }
+.est-chip {
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+  padding: 5px 12px; font-size: 12px; color: #1d4ed8; font-weight: 600;
+}
+
+/* Progress — compact */
+.progress-strip {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 12px 18px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 16px;
+}
+.prog-strip-label { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+.prog-strip-bar-wrap { flex: 1; }
+.prog-strip-bg { background: #f1f5f9; border-radius: 99px; height: 7px; }
+.prog-strip-fill { height: 7px; border-radius: 99px; background: #d97706; width: 28%; }
+.prog-strip-pct { font-size: 13px; font-weight: 700; color: #d97706; white-space: nowrap; }
+.prog-strip-count { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+
+/* Tabs — same pill style */
+.tabs-row2 { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 16px; }
+.tab2 { padding: 6px 13px; border-radius: 8px; border: 1.5px solid #e2e8f0;
+         background: #fff; color: #64748b; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.tab2.active { background: #2563eb; border-color: transparent; color: #fff; }
+.tab2.saved  { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
+
+/* Form card — improved */
+.form-card2 {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 0; margin-bottom: 16px; overflow: hidden;
+}
+.form-card2-header {
+  padding: 14px 22px; border-bottom: 1px solid #f1f5f9;
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fafbfc;
+}
+.form-card2-title { font-size: 13px; font-weight: 700; color: #1a3a6b; }
+.form-card2-badge {
+  font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 99px;
+  background: #eff6ff; color: #2563eb; letter-spacing: 0.5px;
+}
+.form-card2-body { padding: 20px 22px; }
+.form-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+.form-group2 { display: flex; flex-direction: column; gap: 5px; }
+.form-label2 { font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.4px; }
+.form-input2 {
+  padding: 8px 11px; border: 1.5px solid #d1d5db; border-radius: 7px;
+  font-size: 13px; color: #111827; background: #fff;
+}
+.form-input2.prefilled { background: #f8fafc; color: #374151; }
+.form-card2-footer {
+  padding: 14px 22px; border-top: 1px solid #f1f5f9; background: #fafbfc;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.save-btn2 { background: #2563eb; color: #fff; padding: 9px 28px; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.footer-hint { font-size: 12px; color: #94a3b8; }
+
+/* Submit card */
+.submit-card2 {
+  background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px;
+  padding: 16px 22px; display: flex; align-items: center; justify-content: space-between;
+}
+.submit-card2 h3 { color: #15803d; font-size: 14px; font-weight: 700; }
+.submit-card2 p  { color: #166534; font-size: 12px; margin-top: 2px; }
+.submit-btn2 { background: #16a34a; color: #fff; padding: 10px 26px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+hr.divider { border: none; border-top: 1px solid #f1f5f9; margin: 14px 0; }
+</style>
+</head>
+<body>
+
+<div style="display:flex;">
+  <div style="width:50%;"><div class="col-label before">⬅ BEFORE (current)</div></div>
+  <div style="width:50%;"><div class="col-label after">PROPOSED (after) ➡</div></div>
+</div>
+
+<div class="page-wrap">
+
+<!-- ══════════════ BEFORE ══════════════ -->
+<div class="panel">
+
+  <!-- back btn -->
+  <div style="margin-bottom:14px;">
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#e2e8f0;font-size:17px;color:#64748b;">←</span>
+  </div>
+
+  <div class="before-module-label">MODULE</div>
+  <div class="before-module-title">Contract Management</div>
+  <div class="before-module-desc">Fill in all sections below to complete your audit application.</div>
+
+  <div class="before-progress">
+    <div class="prog-row">
+      <span class="prog-label">Application Progress</span>
+      <span class="prog-pct">28% Complete</span>
+    </div>
+    <div class="prog-bg"><div class="prog-fill" style="width:28%;background:#d97706;"></div></div>
+    <div class="prog-sub">2 of 7 sections filled in</div>
+  </div>
+
+  <div class="helper-box">
+    <b>How to fill this section:</b> Fill all fields below then click <b>Save Section</b> at the bottom. You can edit any time before submitting.
+  </div>
+
+  <div class="tabs-row">
+    <div class="tab saved">Admin Financial Sanction</div>
+    <div class="tab saved">Technical Sanction</div>
+    <div class="tab active">Tender Award Contract</div>
+    <div class="tab">Contract Master</div>
+    <div class="tab">Payments Recoveries</div>
+    <div class="tab">Budget Summary</div>
+    <div class="tab">Technical Inspection</div>
+  </div>
+
+  <div class="form-card">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Name of Project</label>
+        <input class="form-input" type="text" value="Eastern Feeder Canal Restoration" readonly/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estimate Number</label>
+        <input class="form-input" type="text" value="EST/2024/0012"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Year of Estimate</label>
+        <input class="form-input" type="text" value="2024-25"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Agreement Number</label>
+        <input class="form-input" type="text" placeholder="Enter agreement number…"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Year of Agreement</label>
+        <input class="form-input" type="text" placeholder="e.g. 2024-25"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Name of Contractor</label>
+        <input class="form-input" type="text" placeholder="Enter contractor name…"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount of Contract (₹)</label>
+        <input class="form-input" type="text" placeholder="Enter amount…"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date of Agreement</label>
+        <input class="form-input" type="date"/>
+      </div>
+    </div>
+    <div class="save-row">
+      <button class="save-btn">Save Section</button>
+      <span class="save-note">Changes are saved per-section. Submit only after all sections are complete.</span>
+    </div>
+  </div>
+
+  <div class="submit-card">
+    <div>
+      <h3>All Sections Complete!</h3>
+      <p>Scroll down to review and submit your complete application.</p>
+    </div>
+    <button class="submit-btn">Submit Application</button>
+  </div>
+
+</div><!-- /before panel -->
+
+
+<!-- ══════════════ AFTER ══════════════ -->
+<div class="panel after-panel">
+
+  <!-- back btn -->
+  <div style="margin-bottom:14px;">
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#e2e8f0;font-size:17px;color:#64748b;">←</span>
+  </div>
+
+  <!-- Page header card with project context -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-header-badge">&#9632;&nbsp; Contract Management Module</div>
+      <div class="page-header-title">Tender Award Contract</div>
+      <div class="page-header-sub">Section 3 of 7 &mdash; Fill all fields and save before moving to the next section.</div>
+    </div>
+    <div class="page-header-right">
+      <div class="project-chip"><strong>Eastern Feeder Canal Restoration</strong></div>
+      <div class="est-chip">EST/2024/0012 &nbsp;|&nbsp; 2024-25</div>
+    </div>
+  </div>
+
+  <!-- Progress strip — compact single row -->
+  <div class="progress-strip">
+    <span class="prog-strip-label">Progress</span>
+    <div class="prog-strip-bar-wrap">
+      <div class="prog-strip-bg"><div class="prog-strip-fill"></div></div>
+    </div>
+    <span class="prog-strip-pct">28%</span>
+    <span class="prog-strip-count">2 / 7 sections</span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-row2">
+    <div class="tab2 saved">Admin Financial Sanction</div>
+    <div class="tab2 saved">Technical Sanction</div>
+    <div class="tab2 active">Tender Award Contract</div>
+    <div class="tab2">Contract Master</div>
+    <div class="tab2">Payments Recoveries</div>
+    <div class="tab2">Budget Summary</div>
+    <div class="tab2">Technical Inspection</div>
+  </div>
+
+  <!-- Form card with header + footer -->
+  <div class="form-card2">
+    <div class="form-card2-header">
+      <span class="form-card2-title">Tender Award Contract</span>
+      <span class="form-card2-badge">IN PROGRESS</span>
+    </div>
+    <div class="form-card2-body">
+      <div class="form-grid2">
+        <div class="form-group2">
+          <label class="form-label2">Name of Project</label>
+          <input class="form-input2 prefilled" type="text" value="Eastern Feeder Canal Restoration" readonly/>
+        </div>
+        <div class="form-group2">
+          <label class="form-label2">Estimate Number</label>
+          <input class="form-input2 prefilled" type="text" value="EST/2024/0012" readonly/>
+        </div>
+        <div class="form-group2">
+          <label class="form-label2">Year of Estimate</label>
+          <input class="form-input2 prefilled" type="text" value="2024-25" readonly/>
+        </div>
+        <div class="form-group2">
+          <label class="form-label2">Agreement Number</label>
+          <input class="form-input2" type="text" placeholder="Enter agreement number…"/>
+        </div>
+        <div class="form-group2">
+          <label class="form-label2">Year of Agreement</label>
+          <input class="form-input2" type="text" placeholder="e.g. 2024-25"/>
+        </div>
+        <div class="form-group2">
+          <label class="form-label2">Name of Contractor</label>
+          <input class="form-input2" type="text" placeholder="Enter contractor name…"/>
+        </div>
+        <div class="form-group2">
+          <label class="form-label2">Amount of Contract (₹)</label>
+          <input class="form-input2" type="text" placeholder="Enter amount…"/>
+        </div>
+        <div class="form-group2">
+          <label class="form-label2">Date of Agreement</label>
+          <input class="form-input2" type="date"/>
+        </div>
+      </div>
+    </div>
+    <div class="form-card2-footer">
+      <span class="footer-hint">&#10003; &nbsp;Auto-saved fields are shown with grey background.</span>
+      <button class="save-btn2">Save Section</button>
+    </div>
+  </div>
+
+  <!-- Submit card -->
+  <div class="submit-card2">
+    <div>
+      <h3>&#10003; &nbsp;All Sections Complete!</h3>
+      <p>Review your entries and submit your complete audit application.</p>
+    </div>
+    <button class="submit-btn2">Submit Application</button>
+  </div>
+
+</div><!-- /after panel -->
+</div><!-- /page-wrap -->
+
+</body>
+</html>
