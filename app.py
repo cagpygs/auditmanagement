@@ -4727,88 +4727,10 @@ if not is_admin:
 
     percentage, completed, total = get_user_progress(user_id, tables, master_id=st.session_state.master_id)
 
-    back_col, _ = st.columns([1.3, 6])
-    with back_col:
-        render_back_link(f"back_module_{module_name}")
-    # --- Module header ---
-    st.markdown(f"""
-    <div style="margin-bottom:20px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-            <span style="font-size:11px; font-weight:700; color:#9ca3af; letter-spacing:1px;
-                         text-transform:uppercase; line-height:1;">Module</span>
-            <span style="font-size:22px; font-weight:800; color:#1a3a6b; line-height:1;">
-                {selected_module}
-            </span>
-        </div>
-        <p style="margin:4px 0 0; color:#6b7280; font-size:13.5px;">
-            Fill in all sections below to complete your audit application.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    prog_color = "#dc2626" if percentage < 40 else ("#d97706" if percentage < 75 else "#059669")
-
-    st.markdown(f"""
-    <div class="progress-wrapper">
-        <div class="progress-label">Application Progress</div>
-        <div class="progress-pct">{percentage:.0f}% Complete</div>
-        <div class="custom-progress">
-            <div class="custom-progress-fill" style="width:{percentage}%; background:{prog_color};"></div>
-        </div>
-        <div style="margin-top:8px; font-size:12px; color:#9ca3af;">
-            {completed} of {total} sections filled in
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Show one-time success/error messages after actions that rerun the page (e.g., Save Section).
-    render_flash_message()
-
-    if percentage == 100:
-        st.markdown("""
-        <div class="completion-banner">
-            <h3>All Sections Complete!</h3>
-            <p>Scroll down to review and submit your complete application.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # --- Tabs ---
-    st.markdown('<div class="module-form-tabs-trigger"></div>', unsafe_allow_html=True)
-    tab_label_by_table = {}
-    saved_tab_css = []
-    for i, table in enumerate(tables):
-        section_name = table.replace(prefix, "").replace("_", " ").title()
-        is_complete = is_section_complete(user_id, table, master_id=st.session_state.master_id)
-        tab_label_by_table[table] = section_name
-        if is_complete:
-            n = i + 1
-            saved_tab_css.append(
-                f"body:has(.module-form-tabs-trigger) [data-testid='stRadio']"
-                f" [role='radiogroup'] label:nth-child({n}):not(:has(input:checked))"
-                f"{{background:#F0FDF4!important;color:#16A34A!important;border-color:#86EFAC!important;}}"
-            )
-    if saved_tab_css:
-        st.markdown(f"<style>{''.join(saved_tab_css)}</style>", unsafe_allow_html=True)
-
-    active_tab_key = f"active_module_table_{module_name}"
-    if active_tab_key not in st.session_state or st.session_state.get(active_tab_key) not in tables:
-        st.session_state[active_tab_key] = tables[0]
-
-    active_table = st.radio(
-        "Section",
-        options=tables,
-        key=active_tab_key,
-        format_func=lambda t: tab_label_by_table.get(t, str(t)),
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-    section_container = st.container()
-
-    first_table      = tables[0]
+    # Resolve first section context early so header can show project/estimate chips
+    first_table       = tables[0]
     first_table_draft = get_user_draft(first_table, user_id, master_id=st.session_state.master_id)
-
     estimate_number = name_of_project = year_of_estimate = None
-
     if first_table_draft:
         estimate_number  = first_table_draft.get("estimate_number")
         year_of_estimate = first_table_draft.get("year_of_estimate")
@@ -4825,13 +4747,150 @@ if not is_admin:
                     if alt_s.get("name_of_project"):
                         name_of_project = alt_s.get("name_of_project")
                         break
-
     if not estimate_number:
         estimate_number  = st.session_state.get("initial_estimate_number")
     if not year_of_estimate:
         year_of_estimate = st.session_state.get("initial_year_of_estimate")
     if not name_of_project:
         name_of_project  = st.session_state.get("initial_name_of_project")
+
+    # Determine active section from session state before radio renders (used in header)
+    _htab_key = f"active_module_table_{module_name}"
+    if _htab_key not in st.session_state or st.session_state.get(_htab_key) not in tables:
+        st.session_state[_htab_key] = tables[0]
+    _header_section  = st.session_state[_htab_key]
+    _section_display = _header_section.replace(prefix, "").replace("_", " ").title()
+    _section_num     = tables.index(_header_section) + 1
+
+    _proj_chip = esc_html(str(name_of_project or "—"))
+    _est_chip  = esc_html(str(estimate_number or "—"))
+    _yr_chip   = esc_html(str(year_of_estimate or "—"))
+
+    back_col, _ = st.columns([1.3, 6])
+    with back_col:
+        render_back_link(f"back_module_{module_name}")
+
+    with st.container(border=True):
+        _hdr_col, _chip_col, _upload_col = st.columns([2.2, 1.6, 1.2])
+        with _hdr_col:
+            st.markdown(f"""
+            <div class="module-page-header-badge" style="margin-bottom:5px;">{esc_html(selected_module)}</div>
+            <div class="module-page-header-sub">Section {_section_num} of {total} &mdash; Fill all fields and save before moving to the next section.</div>
+            """, unsafe_allow_html=True)
+        with _chip_col:
+            st.markdown(f"""
+            <div style="display:flex;flex-direction:column;gap:5px;padding-top:2px;">
+              <div class="module-context-chip module-context-chip-proj">{_proj_chip}</div>
+              <div class="module-context-chip module-context-chip-est">{_est_chip}&nbsp;&nbsp;|&nbsp;&nbsp;{_yr_chip}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with _upload_col:
+            _mid_for_upload = st.session_state.get("master_id")
+            if _mid_for_upload:
+                _master_info_top = get_master_submission(_mid_for_upload)
+                _existing_est    = (_master_info_top or {}).get("estimate_attachment")
+                def _clean_name(s): return "".join([c if c.isalnum() or c in ('-', '_') else '_' for c in str(s)])
+                if _existing_est:
+                    st.caption(f"📎 {os.path.basename(_existing_est)}")
+                _est_file_top = custom_file_uploader(
+                    "Estimate File Upload",
+                    type=['pdf', 'doc', 'docx', 'xlsx', 'xls', 'jpg', 'jpeg', 'png'],
+                    key="uploader_estimate_top",
+                )
+                if _est_file_top:
+                    _fid_top = f"{_est_file_top.name}_{_est_file_top.size}"
+                    if st.session_state.get("last_est_id") != _fid_top:
+                        _ok, _err = _validate_upload(_est_file_top)
+                        if not _ok:
+                            st.error(_err)
+                        else:
+                            _full = get_full_submission_data(_mid_for_upload)
+                            _sub  = _full.get(tables[0]) if tables else None
+                            if _sub is not None and not _sub.empty:
+                                _tr = _sub.iloc[0]
+                                _en = _clean_name(_tr.get("estimate_number", (_master_info_top or {}).get("estimate_number", "NA")))
+                                _pn = _clean_name(_tr.get("name_of_project", (_master_info_top or {}).get("name_of_project", "NA")))
+                                _ey = _clean_name(_tr.get("year_of_estimate", (_master_info_top or {}).get("year_of_estimate", "NA")))
+                            else:
+                                _en = _clean_name((_master_info_top or {}).get("estimate_number", "NA"))
+                                _pn = _clean_name((_master_info_top or {}).get("name_of_project", "NA"))
+                                _ey = _clean_name((_master_info_top or {}).get("year_of_estimate", "NA"))
+                            _ext  = os.path.splitext(_est_file_top.name)[1].lower()
+                            _path = os.path.join("uploads", f"Estimate_{_en}_{_pn}_{_ey}{_ext}")
+                            with open(_path, "wb") as _f:
+                                _f.write(_est_file_top.getbuffer())
+                            update_master_attachments(_mid_for_upload, estimate_path=_path)
+                            st.session_state["last_est_id"] = _fid_top
+                            st.rerun()
+            else:
+                st.markdown('<div class="module-page-header-sub" style="padding-top:10px;">Save section 1 to enable upload.</div>', unsafe_allow_html=True)
+
+    prog_color = "#dc2626" if percentage < 40 else ("#d97706" if percentage < 75 else "#059669")
+
+    st.markdown(f"""
+    <div class="module-progress-strip">
+      <span class="module-progress-strip-label">Progress</span>
+      <div class="module-progress-strip-bar-wrap">
+        <div class="module-progress-strip-bg">
+          <div class="module-progress-strip-fill" style="width:{percentage}%;background:{prog_color};"></div>
+        </div>
+      </div>
+      <span class="module-progress-strip-pct" style="color:{prog_color};">{percentage:.0f}%</span>
+      <span class="module-progress-strip-count">{completed}&nbsp;/&nbsp;{total} sections</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Show one-time success/error messages after actions that rerun the page (e.g., Save Section).
+    render_flash_message()
+
+    # --- Tabs ---
+    st.markdown('<div class="module-form-tabs-trigger"></div>', unsafe_allow_html=True)
+    tab_label_by_table = {}
+    saved_tab_css = []
+    for i, table in enumerate(tables):
+        section_name = table.replace(prefix, "").replace("_", " ").title()
+        is_complete = is_section_complete(user_id, table, master_id=st.session_state.master_id)
+        tab_label_by_table[table] = section_name
+        if is_complete:
+            n = i + 1
+            # Target both [role=radiogroup] and direct > div fallback for Streamlit 1.31+
+            _bases = [
+                f"body:has(.module-form-tabs-trigger) [data-testid='stRadio'] [role='radiogroup'] label:nth-child({n}):not(:has(input:checked))",
+                f"body:has(.module-form-tabs-trigger) [data-testid='stRadio'] > div > label:nth-child({n}):not(:has(input:checked))",
+            ]
+            for _sel in _bases:
+                saved_tab_css.append(
+                    f"{_sel}{{background:#F0FDF4!important;color:#16A34A!important;border-color:#86EFAC!important;}}"
+                    f"{_sel} p{{color:#16A34A!important;}}"
+                    f"{_sel}:hover{{background:#dcfce7!important;color:#15803d!important;border-color:#86EFAC!important;}}"
+                    f"{_sel}:hover p{{color:#15803d!important;}}"
+                )
+    if saved_tab_css:
+        st.markdown(f"<style>{''.join(saved_tab_css)}</style>", unsafe_allow_html=True)
+
+    # Compute submit eligibility early so both buttons can share the same row
+    _master_id_for_submit = st.session_state.get("master_id")
+    if _master_id_for_submit:
+        _incomplete_early = get_incomplete_forms(user_id, tables, master_id=_master_id_for_submit)
+    else:
+        _incomplete_early = tables
+    _can_submit_early = len(_incomplete_early) == 0
+
+    active_tab_key = f"active_module_table_{module_name}"
+    if active_tab_key not in st.session_state or st.session_state.get(active_tab_key) not in tables:
+        st.session_state[active_tab_key] = tables[0]
+
+    active_table = st.radio(
+        "Section",
+        options=tables,
+        key=active_tab_key,
+        format_func=lambda t: tab_label_by_table.get(t, str(t)),
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+    section_container = st.container()
+    # first_table, first_table_draft, estimate_number, year_of_estimate, name_of_project
+    # resolved above (before header render)
 
     for i, table in enumerate(tables):
         if table != active_table:
@@ -4841,19 +4900,8 @@ if not is_admin:
             columns        = get_table_columns(table, is_admin=False)
 
             if table != first_table and not first_table_draft:
-                st.markdown("""
-                <div class="section-helper">
-                    <b>Please complete the first section first.</b><br>
-                    You must save the first section before proceeding.
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                <div class="section-helper">
-                    <b>How to fill this section:</b> Fill all fields below then click
-                    <b>Save Section</b> at the bottom. You can edit any time before submitting.
-                </div>
-                """, unsafe_allow_html=True)
+                st.warning("Complete the first section before proceeding to this one.")
+
 
             # Initialize session state (rehydrate if Streamlit prunes widget state when switching sections)
             init_key = f"{table}_initialized"
@@ -5013,8 +5061,18 @@ if not is_admin:
                         filled_fields += 1
 
                 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
-                if st.button("Save Section", key=f"save_{table}", use_container_width=True, type="primary"):
+                _save_col, _submit_col = st.columns(2)
+                with _save_col:
+                    _save_clicked = st.button("Save Section", key=f"save_{table}", use_container_width=True, type="primary")
+                with _submit_col:
+                    _submit_from_save_row = st.button(
+                        "Submit My Complete Application",
+                        key="submit_btn_inline",
+                        use_container_width=True,
+                        type="primary",
+                        disabled=not _can_submit_early,
+                    )
+                if _save_clicked:
                     if not can_edit:
                         st.warning("This application has been submitted and cannot be edited.")
                         st.stop()
@@ -5074,6 +5132,23 @@ if not is_admin:
                     except Exception as e:
                         report_error("Failed to save section.", e, "app.save_first_section")
                         st.stop()
+
+                if _submit_from_save_row:
+                    latest_incomplete = get_incomplete_forms(user_id, tables, master_id=st.session_state.master_id)
+                    if latest_incomplete:
+                        st.error(f"Submission blocked: {len(tables) - len(latest_incomplete)}/{len(tables)} sections complete. Finish all tabs first.")
+                        st.stop()
+                    success = update_master_status(st.session_state.master_id, "COMPLETED")
+                    if success:
+                        set_drafts_to_final(st.session_state.master_id, tables)
+                        submitted_master_id = st.session_state.master_id
+                        if module_name == "contract_management":
+                            set_flash_message("success", f"Contract submitted successfully. Reference ID: {submitted_master_id}")
+                        else:
+                            set_flash_message("success", f"Application submitted successfully. Reference ID: {submitted_master_id}")
+                        st.session_state.master_id = None
+                        st.session_state.current_view = "Main"
+                        st.rerun()
 
             # ---- TECHNICAL INSPECTION TAB ----
             elif table == TECH_INSPECTION_TABLE:
@@ -5201,6 +5276,30 @@ if not is_admin:
                                 report_error("Failed to save technical inspection.", e, "app.save_technical_inspection")
                                 st.stop()
 
+                # Submit button outside the form so it's always visible
+                _submit_ti = st.button(
+                    "Submit My Complete Application",
+                    key=f"submit_btn_{table}",
+                    use_container_width=True,
+                    type="primary",
+                    disabled=not _can_submit_early,
+                )
+                if _submit_ti:
+                    latest_incomplete = get_incomplete_forms(user_id, tables, master_id=st.session_state.get("master_id"))
+                    if latest_incomplete:
+                        st.error(f"Please complete all sections before submitting. Incomplete: {', '.join(t.replace(prefix, '').replace('_', ' ').title() for t in latest_incomplete)}")
+                        st.stop()
+                    success = update_master_status(st.session_state.master_id, "COMPLETED")
+                    if success:
+                        set_drafts_to_final(st.session_state.master_id, tables)
+                        set_flash_message("success", "Application submitted successfully!")
+                        st.session_state.master_id = None
+                        st.session_state.pop("unsaved_table_cache", None)
+                        st.session_state.current_view = "Main"
+                        st.rerun()
+                    else:
+                        st.error("Submission failed. Please try again.")
+
             # ---- OTHER TABS ----
             else:
                   col1, col2 = st.columns(2)
@@ -5273,8 +5372,19 @@ if not is_admin:
                           filled_fields += 1
 
                   st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                  _sc2, _sbc2 = st.columns(2)
+                  with _sc2:
+                      _save_clicked2 = st.button("Save Section", key=f"save_{table}", use_container_width=True, type="primary")
+                  with _sbc2:
+                      _submit_from_save2 = st.button(
+                          "Submit My Complete Application",
+                          key=f"submit_btn_{table}",
+                          use_container_width=True,
+                          type="primary",
+                          disabled=not _can_submit_early,
+                      )
 
-                  if st.button("Save Section", key=f"save_{table}", use_container_width=True, type="primary"):
+                  if _save_clicked2:
                       if not first_table_draft:
                           st.warning("Please complete the first section before saving this one.")
                           st.stop()
@@ -5332,6 +5442,22 @@ if not is_admin:
                           report_error("Failed to save section.", e, "app.save_other_section")
                           st.stop()
 
+                  if _submit_from_save2:
+                      latest_incomplete = get_incomplete_forms(user_id, tables, master_id=st.session_state.get("master_id"))
+                      if latest_incomplete:
+                          st.error(f"Please complete all sections before submitting. Incomplete: {', '.join(t.replace(prefix, '').replace('_', ' ').title() for t in latest_incomplete)}")
+                          st.stop()
+                      success = update_master_status(st.session_state.master_id, "COMPLETED")
+                      if success:
+                          set_drafts_to_final(st.session_state.master_id, tables)
+                          set_flash_message("success", "Application submitted successfully!")
+                          st.session_state.master_id = None
+                          st.session_state.pop("unsaved_table_cache", None)
+                          st.session_state.current_view = "Main"
+                          st.rerun()
+                      else:
+                          st.error("Submission failed. Please try again.")
+
             # Cache current inputs so switching sections doesn't wipe unsaved values.
             cached_tables = st.session_state.setdefault("unsaved_table_cache", {})
             if isinstance(cached_tables, dict):
@@ -5348,110 +5474,7 @@ if not is_admin:
     else:
         incomplete_sections = tables
 
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
-    if not master_id_active:
-        st.info("Save at least one section once to initialize the application, then upload files here.")
-    else:
-        m_id = st.session_state.master_id
-        master_info = get_master_submission(m_id)
-        existing_est = master_info.get("estimate_attachment")
-
-        def clean(s): return "".join([c if c.isalnum() or c in ('-', '_') else '_' for c in str(s)])
-
-        st.markdown(
-            "<div class='compact-upload-title'>Estimate File Upload</div>",
-            unsafe_allow_html=True,
-        )
-        upload_col, _ = st.columns([1.25, 2.75])
-        with upload_col:
-            if existing_est:
-                st.caption(f"On record: {os.path.basename(existing_est)}")
-            est_file = custom_file_uploader(
-                "Upload Estimate",
-                type=['pdf', 'doc', 'docx', 'xlsx', 'xls', 'jpg', 'jpeg', 'png'],
-                key="uploader_estimate",
-            )
-        if est_file:
-            fid = f"{est_file.name}_{est_file.size}"
-            if st.session_state.get("last_est_id") != fid:
-                full_data = get_full_submission_data(m_id)
-                sub_data = full_data.get(tables[0] if tables else None)
-                if sub_data is not None and not sub_data.empty:
-                    tr = sub_data.iloc[0]
-                    en = clean(tr.get("estimate_number", master_info.get("estimate_number", "NA")))
-                    pn = clean(tr.get("name_of_project", master_info.get("name_of_project", "NA")))
-                    ey = clean(tr.get("year_of_estimate", master_info.get("year_of_estimate", "NA")))
-                else:
-                    en = clean(master_info.get("estimate_number", "NA"))
-                    pn = clean(master_info.get("name_of_project", "NA"))
-                    ey = clean(master_info.get("year_of_estimate", "NA"))
-                _ok, _err = _validate_upload(est_file)
-                if not _ok:
-                    st.error(_err)
-                else:
-                    ext = os.path.splitext(est_file.name)[1].lower()
-                    spath = os.path.join("uploads", f"Estimate_{en}_{pn}_{ey}{ext}")
-                    with open(spath, "wb") as f:
-                        f.write(est_file.getbuffer())
-                    update_master_attachments(m_id, estimate_path=spath)
-                    st.session_state["last_est_id"] = fid
-                    st.rerun()
-
-        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="submit-cta">
-            <h3> Ready to Submit Your Application?</h3>
-            <p>Once all sections are complete, submit your full application for review.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        if incomplete_sections:
-            st.warning("Some sections are still incomplete. You can upload attachments now and continue filling sections.")
-            for idx, sec in enumerate(incomplete_sections, 1):
-                clean_name = sec.replace(prefix, "").replace("_", " ").title()
-                st.markdown(f"&nbsp;&nbsp;&nbsp;**{idx}.** {clean_name}")
-
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        sections_pending = len(incomplete_sections)
-        sections_total = len(tables)
-        sections_completed = max(sections_total - sections_pending, 0)
-        can_submit = (sections_pending == 0)
-
-        if not can_submit:
-            st.info(
-                f"Complete all sections before submitting. Progress: {sections_completed}/{sections_total} sections."
-            )
-
-        submit_clicked = st.button(
-            " Submit My Complete Application",
-            use_container_width=True,
-            type="primary",
-            disabled=not can_submit,
-        )
-        if submit_clicked:
-            # Guard again server-side so submission cannot bypass section checks.
-            latest_incomplete = get_incomplete_forms(user_id, tables, master_id=st.session_state.master_id)
-            if latest_incomplete:
-                st.error(
-                    f"Submission blocked: {len(latest_incomplete)}/{len(tables)} sections are complete. "
-                    "Please finish all tabs first."
-                )
-                st.stop()
-
-            success = update_master_status(st.session_state.master_id, 'COMPLETED')
-            if success:
-                set_drafts_to_final(st.session_state.master_id, tables)
-                submitted_master_id = st.session_state.master_id
-                # Persist message across redirect to dashboard.
-                if module_name == "contract_management":
-                    set_flash_message("success", f"Contract submitted successfully. Reference ID: {submitted_master_id}")
-                else:
-                    set_flash_message("success", f"Application submitted successfully. Reference ID: {submitted_master_id}")
-                st.session_state.master_id = None
-                st.session_state.current_view = "Main"
-                st.rerun()
+        # File upload and submit button are now at the top right (alongside header)
 
 
 # =====================================================

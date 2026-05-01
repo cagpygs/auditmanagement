@@ -1090,7 +1090,121 @@ footer,
     line-height: 1.65;
 }
 
-/* â”€â”€ PROGRESS (form) â”€â”€ */
+/* ── MODULE PAGE HEADER CARD ── */
+.module-page-header-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 22px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: var(--shadow-xs);
+}
+.module-page-header-left { display: flex; flex-direction: column; gap: 3px; }
+.module-page-header-badge {
+    font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
+    color: var(--primary); text-transform: uppercase; margin-bottom: 2px;
+}
+.module-page-header-title {
+    font-size: 20px; font-weight: 800; color: #1a3a6b; line-height: 1.2;
+}
+.module-page-header-sub {
+    font-size: 12.5px; color: var(--text-muted); margin-top: 2px;
+}
+.module-page-header-right {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0;
+}
+.module-context-chip {
+    border-radius: 8px; padding: 5px 12px; font-size: 12px; white-space: nowrap;
+}
+.module-context-chip-proj {
+    background: #f1f5f9; border: 1px solid var(--border);
+    color: #1a3a6b; font-weight: 700;
+}
+.module-context-chip-est {
+    background: #eff6ff; border: 1px solid #bfdbfe;
+    color: #1d4ed8; font-weight: 600;
+}
+
+/* ── MODULE HEADER BORDER CONTAINER (st.container border=True) ── */
+/* Target the border container that wraps the module header */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.module-page-header-badge) {
+    padding: 12px 16px !important;
+    margin-bottom: 12px !important;
+}
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.module-page-header-badge)
+  > div[data-testid="stVerticalBlock"] {
+    gap: 0 !important;
+}
+/* Vertically centre chip column content */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.module-page-header-badge)
+  [data-testid="stColumn"] {
+    display: flex;
+    align-items: center;
+}
+
+/* ── MODULE PROGRESS STRIP ── */
+.module-progress-strip {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 11px 18px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: var(--shadow-xs);
+}
+.module-progress-strip-label {
+    font-size: 10.5px; font-weight: 700; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 0.7px; white-space: nowrap;
+}
+.module-progress-strip-bar-wrap { flex: 1; }
+.module-progress-strip-bg {
+    background: var(--border-light); border-radius: 99px; height: 7px;
+}
+.module-progress-strip-fill {
+    height: 7px; border-radius: 99px; transition: width 0.45s ease;
+}
+.module-progress-strip-pct {
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.module-progress-strip-count {
+    font-size: 11px; color: var(--text-faint); white-space: nowrap;
+}
+
+/* ── MODULE SECTION CARD HEADER ── */
+.module-section-card-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 16px;
+    background: #fafbfc;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    margin-bottom: 0;
+    margin-top: 4px;
+}
+.module-section-card-title {
+    font-size: 13px; font-weight: 700; color: #1a3a6b;
+}
+.module-sec-badge {
+    font-size: 10px; font-weight: 700; padding: 3px 9px;
+    border-radius: 99px; letter-spacing: 0.5px;
+}
+.module-sec-badge-done  { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
+.module-sec-badge-inprog { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+
+/* ── MODULE SAVE HINT ── */
+.module-save-hint {
+    font-size: 12px; color: var(--text-faint);
+    display: flex; align-items: center; height: 100%;
+    padding: 8px 0;
+}
+
+/* ── PROGRESS (form) – legacy ── */
 .progress-wrapper {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -1271,73 +1385,91 @@ footer,
     font-size: 13px;
 }
 
-/* Module form tabs — flat pill style matching DPR v1-v6 tabs. */
+/* ── MODULE FORM TABS — flat pill style (Streamlit 1.31+) ── */
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] {
+    margin-top: 4px !important;
+    margin-bottom: 6px !important;
+}
+
+/* Hide the widget label ("Section") that Streamlit still renders in horizontal radio */
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] [data-testid="stWidgetLabel"],
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] > div[class*="label"],
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] > label:first-child {
+    display: none !important;
+}
+
+/* Row container */
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] > div,
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] [role="radiogroup"] {
     display: flex !important;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 0 0 4px 0;
-    border-radius: 0;
-    border: none;
-    border-bottom: 1px solid #f1f5f9;
-    background: transparent;
-    box-shadow: none;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 0 0 2px 0 !important;
+    border: none !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    align-items: center !important;
 }
 
-body:has(.module-form-tabs-trigger) [data-testid="stRadio"] [role="radiogroup"]::-webkit-scrollbar {
-    height: 4px;
-}
-
-body:has(.module-form-tabs-trigger) [data-testid="stRadio"] [role="radiogroup"]::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 999px;
-}
-
-/* Each tab pill — matches DPR revision tab style. */
+/* Each pill label */
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label {
+    display: inline-flex !important;
+    align-items: center !important;
     margin: 0 !important;
-    padding: 6px 14px !important;
+    padding: 5px 13px !important;
     border-radius: 8px !important;
     border: 1.5px solid #E2E8F0 !important;
     background: #FFFFFF !important;
-    cursor: pointer;
-    white-space: nowrap;
+    cursor: pointer !important;
+    white-space: nowrap !important;
     font-size: 12px !important;
     font-weight: 600 !important;
     color: #64748B !important;
     font-family: 'Inter', sans-serif !important;
-    letter-spacing: 0.3px;
-    transition: all 0.15s ease;
+    letter-spacing: 0.2px !important;
+    transition: background 0.13s, color 0.13s, border-color 0.13s !important;
+    line-height: 1.4 !important;
+    min-height: 0 !important;
+    height: auto !important;
 }
 
-/* Hide the default radio glyph. */
-body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
+/* Hide the radio dot / indicator — covers old and new Streamlit structures */
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label > div:first-child,
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label [data-baseweb="radio"] > div:first-child,
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label > span:first-child:not(:last-child),
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] input[type="radio"] {
     display: none !important;
 }
 
-body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label:hover:not(:has(input:checked)) {
-    background: #f1f5f9 !important;
-    color: #334155 !important;
+/* Kill extra margin/padding on the text <p> inside label */
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label p,
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label > div:last-child p {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: inherit !important;
+    line-height: 1.4 !important;
 }
 
-body:has(.module-form-tabs-trigger) [data-testid="stRadio"] input {
-    display: none !important;
-}
-
-/* Active tab — blue, same as DPR v1-v6. */
+/* Active tab — solid blue */
 body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label:has(input:checked) {
     background: #2563EB !important;
     border-color: transparent !important;
+    color: #FFFFFF !important;
     box-shadow: none !important;
+}
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label:has(input:checked) p {
     color: #FFFFFF !important;
 }
 
-/* Tighten vertical spacing around the selector. */
-body:has(.module-form-tabs-trigger) [data-testid="stRadio"] {
-    margin-top: 6px;
-    margin-bottom: 8px;
+/* Hover — inactive only */
+body:has(.module-form-tabs-trigger) [data-testid="stRadio"] label:hover:not(:has(input:checked)) {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
+    border-color: #cbd5e1 !important;
 }
 
 body:has(.dashboard-no-padding-trigger) [data-testid="stMainBlockContainer"]>div {
